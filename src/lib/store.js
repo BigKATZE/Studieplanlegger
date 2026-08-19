@@ -1,7 +1,7 @@
 const KEY = 'oliarev-study-planner-v2'
 
 export function uid() {
-  return Math.random().toString(36).slice(2, 10)
+  return crypto.randomUUID()
 }
 
 export const SUBJECT_COLORS = [
