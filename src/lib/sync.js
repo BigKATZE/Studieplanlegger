@@ -57,19 +57,49 @@ export function useStore(user) {
   const [ready, setReady] = useState(false)
   const saveTimer = useRef(null)
   const lastWrite = useRef(0)
+  const lastSynced = useRef(0)
 
   const saveRemoteDebounced = useCallback(
     (payload) => {
       clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(() => {
+      saveTimer.current = setTimeout(async () => {
         const ts = Date.now()
         lastWrite.current = ts
-        supabase
+        if (!lastSynced.current) {
+          const { error } = await supabase
+            .from('user_data')
+            .upsert({ user_id: userId, data: payload, updated_at: new Date(ts).toISOString() })
+          if (error) return console.error('Supabase-save:', error.message)
+          lastSynced.current = ts
+          return
+        }
+        const { data: row, error } = await supabase
           .from('user_data')
-          .upsert({ user_id: userId, data: payload, updated_at: new Date(ts).toISOString() })
-          .then(({ error }) => {
-            if (error) console.error('Supabase-save:', error.message)
-          })
+          .update({ data: payload, updated_at: new Date(ts).toISOString() })
+          .eq('user_id', userId)
+          .eq('updated_at', new Date(lastSynced.current).toISOString())
+          .select('updated_at')
+          .maybeSingle()
+        if (error) return console.error('Supabase-save:', error.message)
+        if (row) {
+          lastSynced.current = new Date(row.updated_at).getTime()
+          return
+        }
+        console.warn('Konflikt: raden ble endret av en annen enhet, henter nyeste versjon')
+        const { data: fresh } = await supabase
+          .from('user_data')
+          .select('data, updated_at')
+          .eq('user_id', userId)
+          .maybeSingle()
+        if (fresh?.data) {
+          lastSynced.current = new Date(fresh.updated_at).getTime()
+          setData(normalize(fresh.data))
+        } else {
+          const { error: e2 } = await supabase
+            .from('user_data')
+            .insert({ user_id: userId, data: payload, updated_at: new Date(ts).toISOString() })
+          if (!e2) lastSynced.current = ts
+        }
       }, 800)
     },
     [userId],
@@ -92,6 +122,7 @@ export function useStore(user) {
       const { data: row } = await supabase.from('user_data').select('data').eq('user_id', userId).maybeSingle()
       if (!alive) return
       if (row?.data) {
+        lastSynced.current = new Date(row.updated_at).getTime()
         setData(normalize(row.data))
       } else {
         const next = normalize(localData(userId) ?? load())
@@ -109,6 +140,7 @@ export function useStore(user) {
         (payload) => {
           if (!alive || !payload.new?.data) return
           if (new Date(payload.new.updated_at).getTime() <= lastWrite.current) return
+          lastSynced.current = new Date(payload.new.updated_at).getTime()
           setData(normalize(payload.new.data))
         },
       )
