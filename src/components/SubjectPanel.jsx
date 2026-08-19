@@ -12,7 +12,7 @@ export default function SubjectPanel({ subjects, lectures, assignments, onSetLev
   if (subjects.length === 0) {
     return (
       <section className="mt-8 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
-        Ingen fag ennå. Legg til et fag eller importer en timeplan-PDF.
+        Ingen fag ennå. Legg til et fag eller importer en timeplan.
       </section>
     )
   }

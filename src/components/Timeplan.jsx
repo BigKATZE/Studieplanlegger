@@ -27,7 +27,7 @@ export default function Timeplan({ lectures, subjects, onToggleLecture, onToggle
       </div>
       {lectures.length === 0 && (
         <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
-          Ingen forelesninger ennå. Importer en timeplan-PDF eller legg til manuelt.
+          Ingen forelesninger ennå. Importer en timeplan eller legg til manuelt.
         </p>
       )}
       {visible.length === 0 && lectures.length > 0 && (
