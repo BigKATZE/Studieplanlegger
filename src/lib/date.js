@@ -1,4 +1,4 @@
-export const DEFAULT_WEEKS = Array.from({ length: 52 - 33 + 1 }, (_, i) => 33 + i)
+export const DEFAULT_WEEKS = Array.from({ length: 52 - 34 + 1 }, (_, i) => 34 + i)
 
 export function isoWeek(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
