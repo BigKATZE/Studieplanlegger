@@ -78,4 +78,22 @@ assert.equal(a10.actions[0].label, 'Kapittel 3')
 assert.equal(a10.actions[0].subject.id, 's2')
 assert.equal(a10.actions[1].date.getDate(), 3)
 
+// Dato mer enn ~2 måneder tilbake skal rulles til neste år (skoleåret krysser kalenderår).
+const now = new Date()
+now.setHours(0, 0, 0, 0)
+const twoMonthsAgo = new Date(now)
+twoMonthsAgo.setMonth(now.getMonth() - 2)
+
+const a11 = parseSmartInput('eksamen i bedøk 1. mai', subjects)
+assert.equal(a11.ok, true)
+assert.equal(a11.actions[0].date.getMonth(), 4)
+assert.ok(a11.actions[0].date >= twoMonthsAgo, 'dato > 2 måneder tilbake skal rulles til neste år')
+
+const a12 = parseSmartInput('eksamen i bedøk 1. mai 2025', subjects)
+assert.equal(a12.ok, true)
+assert.equal(a12.actions[0].date.getFullYear(), 2025, 'eksplisitt årstall skal beholdes')
+
+const a13 = parseSmartInput('eksamen i bedøk 1. august', subjects)
+assert.ok(a13.actions[0].date >= twoMonthsAgo, 'august ruller til neste år hvis > 2 måneder tilbake')
+
 console.log('parseSmartInput: ok')

@@ -40,6 +40,14 @@ function nextWeekday(name) {
   return d
 }
 
+function rollToNextYearIfPast(date) {
+  const ref = new Date()
+  ref.setHours(0, 0, 0, 0)
+  ref.setMonth(ref.getMonth() - 2)
+  if (date < ref) date.setFullYear(date.getFullYear() + 1)
+  return date
+}
+
 function matchDate(low) {
   const isoM = low.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/)
   if (isoM) return new Date(+isoM[1], +isoM[2] - 1, +isoM[3])
@@ -49,7 +57,8 @@ function matchDate(low) {
     if (month >= 1 && month <= 12) {
       let year = dmy[3] ? +dmy[3] : new Date().getFullYear()
       if (year < 100) year += 2000
-      return new Date(year, month - 1, +dmy[1])
+      const d = new Date(year, month - 1, +dmy[1])
+      return dmy[3] ? d : rollToNextYearIfPast(d)
     }
   }
   if (/\bimorgen\b|i\s+morgen/.test(low)) {
@@ -67,26 +76,34 @@ function matchDate(low) {
   for (const [name] of Object.entries(WEEKDAYS)) {
     if (low.includes(name)) return nextWeekday(name)
   }
-  const m = low.match(/\b(\d{1,2})\.\s*([a-zæøå]+)\b/)
-  if (m && MONTHS[m[2]] !== undefined) return new Date(new Date().getFullYear(), MONTHS[m[2]] - 1, +m[1])
+  const m = low.match(/\b(\d{1,2})\.\s*([a-zæøå]+)(?:\s+(\d{4}))?\b/)
+  if (m && MONTHS[m[2]] !== undefined) {
+    const y = m[3] ? +m[3] : new Date().getFullYear()
+    return m[3] ? new Date(y, MONTHS[m[2]] - 1, +m[1]) : rollToNextYearIfPast(new Date(y, MONTHS[m[2]] - 1, +m[1]))
+  }
   return null
 }
 
 function matchDates(low) {
-  const re = /\b(\d{1,2})\.\s*(?:og\s*)?(\d{1,2})\.\s*([a-zæøå]+)\b|\b(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?\b|\b(\d{4})-(\d{1,2})-(\d{1,2})\b|\b(\d{1,2})\.\s*([a-zæøå]+)\b/g
+  const re = /\b(\d{1,2})\.\s*(?:og\s*)?(\d{1,2})\.\s*([a-zæøå]+)\b|\b(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?\b|\b(\d{4})-(\d{1,2})-(\d{1,2})\b|\b(\d{1,2})\.\s*([a-zæøå]+)(?:\s+(\d{4}))?\b/g
   const out = []
   let m
   while ((m = re.exec(low))) {
     if (m[1] && m[3]) {
-      out.push(new Date(new Date().getFullYear(), MONTHS[m[3]] - 1, +m[1]))
-      out.push(new Date(new Date().getFullYear(), MONTHS[m[3]] - 1, +m[2]))
+      out.push(rollToNextYearIfPast(new Date(new Date().getFullYear(), MONTHS[m[3]] - 1, +m[1])))
+      out.push(rollToNextYearIfPast(new Date(new Date().getFullYear(), MONTHS[m[3]] - 1, +m[2])))
     } else if (m[4] && m[5]) {
       const y = m[6] ? (m[6].length === 2 ? 2000 + +m[6] : +m[6]) : new Date().getFullYear()
-      if (+m[5] >= 1 && +m[5] <= 12) out.push(new Date(y, +m[5] - 1, +m[4]))
+      if (+m[5] >= 1 && +m[5] <= 12) {
+        const d = new Date(y, +m[5] - 1, +m[4])
+        out.push(m[6] ? d : rollToNextYearIfPast(d))
+      }
     } else if (m[7] && m[8] && m[9]) {
       out.push(new Date(+m[7], +m[8] - 1, +m[9]))
     } else if (m[10] && m[11] && MONTHS[m[11]] !== undefined) {
-      out.push(new Date(new Date().getFullYear(), MONTHS[m[11]] - 1, +m[10]))
+      const y = m[12] ? +m[12] : new Date().getFullYear()
+      const d = new Date(y, MONTHS[m[11]] - 1, +m[10])
+      out.push(m[12] ? d : rollToNextYearIfPast(d))
     }
   }
   const seen = new Set()
