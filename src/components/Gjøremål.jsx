@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { SubjectChip, DeadlineBadge, Select, WeekFilter } from './ui'
-import { isoWeek, weekRangeByWeek } from '../lib/date'
+import { isoWeek, weekRangeByWeek, DEFAULT_WEEKS } from '../lib/date'
 
 const STATUS_LABEL = { not_started: 'Ikke startet', in_progress: 'I arbeid', done: 'Ferdig' }
 const SECTIONS = [
@@ -29,7 +29,7 @@ export default function Gjøremål({ assignments, subjects, onSetAssignmentStatu
   const groupsByWeek = useMemo(() => new Map(groups.map((g) => [g.week, g])), [groups])
   const weeks = useMemo(() => groups.map((g) => g.week), [groups])
   const emptyByStatus = { not_started: [], in_progress: [], done: [] }
-  const renderWeeks = week == null ? weeks : [week]
+  const renderWeeks = week == null ? DEFAULT_WEEKS : [week]
 
   return (
     <section className="mt-6">

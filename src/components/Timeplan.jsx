@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { isoWeek, weekRangeByWeek, weekdayShort } from '../lib/date'
+import { isoWeek, weekRangeByWeek, weekdayShort, DEFAULT_WEEKS } from '../lib/date'
 import { SubjectChip, WeekFilter } from './ui'
 
 export default function Timeplan({ lectures, subjects, onToggleLecture, onToggleChapter, onUpdateChapter, onRemoveChapter, onRemoveLecture, onEditLecture }) {
@@ -22,9 +22,7 @@ export default function Timeplan({ lectures, subjects, onToggleLecture, onToggle
 
   const groupsByWeek = useMemo(() => new Map(groups.map((g) => [g.week, g])), [groups])
   const weeks = useMemo(() => groups.map((g) => g.week), [groups])
-  // Kun uker som faktisk har forelesninger vises som standard, ellers ville siden
-  // vise ~43 tomme «Uke N»-seksjoner for hele skoleåret (DEFAULT_WEEKS).
-  const renderWeeks = week == null ? weeks : [week]
+  const renderWeeks = week == null ? DEFAULT_WEEKS : [week]
 
   return (
     <section className="mt-6">
