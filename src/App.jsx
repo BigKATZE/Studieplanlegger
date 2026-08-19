@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { load, save, uid, pickSubjectColor } from './lib/store'
 import { fmtShort, iso } from './lib/date'
 import SubjectPanel from './components/SubjectPanel'
@@ -329,6 +330,7 @@ export default function App() {
       {modal === 'ics' && (
         <IcsModal subjects={data.subjects} onImport={actions.icsImport} onClose={() => setModal(null)} />
       )}
+      <Analytics />
     </div>
   )
 }
