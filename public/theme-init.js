@@ -1,6 +1,5 @@
 (function () {
-  var t = localStorage.getItem('planner-theme')
-  if (t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches) {
+  if (localStorage.getItem('planner-theme') === 'dark') {
     document.documentElement.classList.add('dark')
   }
 })()
