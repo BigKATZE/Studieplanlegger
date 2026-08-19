@@ -17,6 +17,19 @@
   --color-muted: #6b7280;
 }
 
+:root.dark {
+  --color-ink: #f3f4f6;
+  --color-primary: #8b5cf6;
+  --color-secondary: #a78bfa;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #f87171;
+  --color-surface: #1f2937;
+  --color-paper: #111827;
+  --color-line: #374151;
+  --color-muted: #9ca3af;
+}
+
 @layer base {
   body {
     @apply bg-paper font-sans text-ink antialiased;

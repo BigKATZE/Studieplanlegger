@@ -54,6 +54,16 @@ export default function App() {
   const [filterSubjectId, setFilterSubjectId] = useState(null)
   const [showLogin, setShowLogin] = useState(false)
   const [undo, setUndo] = useState(null)
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('planner-theme')
+    if (saved) return saved
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark')
+    localStorage.setItem('planner-theme', theme)
+  }, [theme])
 
   useEffect(() => {
     if (!undo) return
@@ -328,32 +338,48 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <header className="relative mx-auto max-w-5xl px-4 pb-6 pt-12">
-        {hasSupabase && !user && (
-          <div className="absolute right-4 top-4 flex gap-2">
+        <div className="absolute right-4 top-4 flex items-center gap-2">
+          <button
+            onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+            aria-label={theme === 'dark' ? 'Bytt til lys modus' : 'Bytt til mørk modus'}
+            className="rounded p-1 text-sm text-muted hover:text-ink"
+          >
+            {theme === 'dark' ? (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 20 20">
+                <circle cx="10" cy="10" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+                <path stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M15.7 4.3l-1.4 1.4M5.7 14.3l-1.4 1.4" />
+              </svg>
+            ) : (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 20 20">
+                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17.3 13.3A7.5 7.5 0 1 1 6.7 2.7a6 6 0 1 0 10.6 10.6z" />
+              </svg>
+            )}
+          </button>
+          {hasSupabase && !user && (
             <button
               onClick={() => setShowLogin(true)}
               className="rounded p-1 text-sm text-muted hover:text-ink"
             >
               Logg inn
             </button>
-          </div>
-        )}
-        {hasSupabase && user && (
-          <div className="absolute right-4 top-4 flex gap-2">
-            <button
-              onClick={() => openModal('password')}
-              className="rounded p-1 text-sm text-muted hover:text-ink"
-            >
-              Endre passord
-            </button>
-            <button
-              onClick={() => supabase.auth.signOut()}
-              className="rounded p-1 text-sm text-muted hover:text-ink"
-            >
-              Logg ut
-            </button>
-          </div>
-        )}
+          )}
+          {hasSupabase && user && (
+            <>
+              <button
+                onClick={() => openModal('password')}
+                className="rounded p-1 text-sm text-muted hover:text-ink"
+              >
+                Endre passord
+              </button>
+              <button
+                onClick={() => supabase.auth.signOut()}
+                className="rounded p-1 text-sm text-muted hover:text-ink"
+              >
+                Logg ut
+              </button>
+            </>
+          )}
+        </div>
         <h1 className="font-display text-4xl font-bold tracking-tight">Studieplanlegger</h1>
         <p className="mt-1 text-sm text-muted">Timeplan, pensum, arbeidskrav og eksamener – uke for uke.</p>
 
