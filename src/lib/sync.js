@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useState } from 'react'
+import { useEffect, useCallback, useRef, useState } from 'react'
 import { supabase, hasSupabase } from './supabase'
 import { load } from './store'
 
@@ -51,19 +51,29 @@ export function useAuth() {
   return { user, status }
 }
 
-function saveRemote(userId, data) {
-  supabase
-    .from('user_data')
-    .upsert({ user_id: userId, data, updated_at: new Date().toISOString() })
-    .then(({ error }) => {
-      if (error) console.error('Supabase-save:', error.message)
-    })
-}
-
 export function useStore(user) {
   const userId = user?.id
   const [data, setData] = useState(() => (userId ? localData(userId) : null))
   const [ready, setReady] = useState(false)
+  const saveTimer = useRef(null)
+  const lastWrite = useRef(0)
+
+  const saveRemoteDebounced = useCallback(
+    (payload) => {
+      clearTimeout(saveTimer.current)
+      saveTimer.current = setTimeout(() => {
+        const ts = Date.now()
+        lastWrite.current = ts
+        supabase
+          .from('user_data')
+          .upsert({ user_id: userId, data: payload, updated_at: new Date(ts).toISOString() })
+          .then(({ error }) => {
+            if (error) console.error('Supabase-save:', error.message)
+          })
+      }, 800)
+    },
+    [userId],
+  )
 
   useEffect(() => {
     if (!userId) {
@@ -86,7 +96,7 @@ export function useStore(user) {
       } else {
         const next = normalize(localData(userId) ?? load())
         setData(next)
-        saveRemote(userId, next)
+        saveRemoteDebounced(next)
       }
       setReady(true)
     }
@@ -98,15 +108,17 @@ export function useStore(user) {
         { event: '*', schema: 'public', table: 'user_data', filter: `user_id=eq.${userId}` },
         (payload) => {
           if (!alive || !payload.new?.data) return
+          if (new Date(payload.new.updated_at).getTime() <= lastWrite.current) return
           setData(normalize(payload.new.data))
         },
       )
       .subscribe()
     return () => {
       alive = false
+      clearTimeout(saveTimer.current)
       sub.unsubscribe()
     }
-  }, [userId])
+  }, [userId, saveRemoteDebounced])
 
   const update = useCallback(
     (fn) => {
@@ -114,11 +126,11 @@ export function useStore(user) {
         if (!prev) return prev
         const next = normalize(fn(prev))
         localStorage.setItem(cacheKey(userId), JSON.stringify(next))
-        if (hasSupabase) saveRemote(userId, next)
+        if (hasSupabase) saveRemoteDebounced(next)
         return next
       })
     },
-    [userId],
+    [userId, saveRemoteDebounced],
   )
 
   return { data, update, ready }
