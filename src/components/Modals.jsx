@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { uid, SUBJECT_COLORS } from '../lib/store'
 import { isoWeek, weekRange } from '../lib/date'
-import { Select } from './ui'
+import { Select, DateField, TimeField } from './ui'
 
 export function Modal({ title, onClose, children }) {
   const panelRef = useRef(null)
@@ -147,13 +147,13 @@ export function LectureForm({ subjects, onAdd, onClose, initial }) {
       </Field>
       <div className="grid grid-cols-3 gap-3">
         <Field label="Dato">
-          <input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} required />
+          <DateField value={date} onChange={setDate} required ariaLabel="Dato" />
         </Field>
         <Field label="Fra">
-          <input type="time" lang="nb-NO" className={inputCls} value={start} onChange={(e) => setStart(e.target.value)} />
+          <TimeField value={start} onChange={setStart} ariaLabel="Starttid" />
         </Field>
         <Field label="Til">
-          <input type="time" lang="nb-NO" className={inputCls} value={end} onChange={(e) => setEnd(e.target.value)} />
+          <TimeField value={end} onChange={setEnd} ariaLabel="Sluttid" />
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -276,7 +276,7 @@ export function AssignmentForm({ subjects, onAdd, onClose, initial }) {
         <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder="Arbeidskrav 1 – …" />
       </Field>
       <Field label="Frist">
-        <input type="date" className={inputCls} value={deadline} onChange={(e) => setDeadline(e.target.value)} required />
+        <DateField value={deadline} onChange={setDeadline} required ariaLabel="Frist" />
       </Field>
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onClose} className="btn-ghost">Avbryt</button>
@@ -307,10 +307,10 @@ export function ExamForm({ subjects, onAdd, onClose, initial }) {
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Dato">
-          <input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} required />
+          <DateField value={date} onChange={setDate} required ariaLabel="Dato" />
         </Field>
         <Field label="Starttid (valgfritt)">
-          <input type="time" lang="nb-NO" className={inputCls} value={time} onChange={(e) => setTime(e.target.value)} />
+          <TimeField value={time} onChange={setTime} ariaLabel="Starttid" />
         </Field>
       </div>
       <div className="flex justify-end gap-2 pt-2">

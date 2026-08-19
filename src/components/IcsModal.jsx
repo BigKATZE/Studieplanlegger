@@ -4,7 +4,7 @@ import { matchSubject } from '../lib/parseSmartInput'
 import { checkFile } from '../lib/upload'
 import { uid } from '../lib/store'
 import { supabase, hasSupabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
-import { Select } from './ui'
+import { Select, DateField } from './ui'
 
 const inputCls =
   'w-full rounded-md border border-line bg-surface px-3 py-2 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20'
@@ -162,11 +162,11 @@ export default function IcsImport({ subjects, onImport, onClose }) {
                     onChange={(e) => patch(i, { title: e.target.value })}
                     className={`${inputCls} min-w-32 flex-1`}
                   />
-                  <input
-                    type="date"
+                  <DateField
                     value={r.date}
-                    onChange={(e) => patch(i, { date: e.target.value })}
-                    className={`${inputCls} w-36`}
+                    onChange={(v) => patch(i, { date: v })}
+                    className="w-28"
+                    ariaLabel="Dato"
                   />
                 </div>
                 <div className="mt-2 flex items-center gap-2">

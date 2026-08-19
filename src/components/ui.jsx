@@ -1,5 +1,82 @@
 import { useEffect, useRef, useState } from 'react'
-import { daysUntil, fmtShort } from '../lib/date'
+import { daysUntil, fmtShort, isoToDisplayDate, displayDateToIso, isValidTime } from '../lib/date'
+
+const fieldInputCls =
+  'w-full rounded-md border border-line bg-surface px-2 py-1.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20'
+
+// Tekstbasert datofelt som alltid viser dd/mm/yyyy, uavhengig av nettleserens/OS-ens
+// locale-innstillinger (i motsetning til <input type="date">, som varierer per bruker).
+// value/onChange bruker fortsatt ISO 'yyyy-mm-dd' internt.
+export function DateField({ value, onChange, className = '', required, ariaLabel }) {
+  const [text, setText] = useState(() => isoToDisplayDate(value))
+  const [focused, setFocused] = useState(false)
+
+  useEffect(() => {
+    if (!focused) setText(isoToDisplayDate(value))
+  }, [value, focused])
+
+  const handleChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 8)
+    let formatted = digits
+    if (digits.length > 4) formatted = `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`
+    else if (digits.length > 2) formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`
+    setText(formatted)
+    const nextIso = displayDateToIso(formatted)
+    if (nextIso) onChange(nextIso)
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      autoComplete="off"
+      placeholder="dd/mm/yyyy"
+      value={text}
+      onChange={handleChange}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      className={`${fieldInputCls} ${className}`}
+      required={required}
+      aria-label={ariaLabel}
+    />
+  )
+}
+
+// Tekstbasert klokkeslettfelt som alltid viser 24-timers HH:mm, uavhengig av
+// nettleserens/OS-ens locale-innstillinger (i motsetning til <input type="time">,
+// som kan vise AM/PM avhengig av brukerens system).
+export function TimeField({ value, onChange, className = '', required, ariaLabel }) {
+  const [text, setText] = useState(value ?? '')
+  const [focused, setFocused] = useState(false)
+
+  useEffect(() => {
+    if (!focused) setText(value ?? '')
+  }, [value, focused])
+
+  const handleChange = (e) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 4)
+    let formatted = digits
+    if (digits.length > 2) formatted = `${digits.slice(0, 2)}:${digits.slice(2)}`
+    setText(formatted)
+    if (isValidTime(formatted)) onChange(formatted)
+  }
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      autoComplete="off"
+      placeholder="tt:mm"
+      value={text}
+      onChange={handleChange}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      className={`${fieldInputCls} ${className}`}
+      required={required}
+      aria-label={ariaLabel}
+    />
+  )
+}
 
 export function Select({ value, onChange, options, className = '', ariaLabel, placeholder = 'Velg…' }) {
   const [open, setOpen] = useState(false)

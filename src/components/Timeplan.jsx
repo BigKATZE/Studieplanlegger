@@ -128,13 +128,15 @@ export default function Timeplan({ lectures, subjects, onToggleLecture, onToggle
                                     setEditingChapter(c.id)
                                     setChapterText(c.text)
                                   }}
-                                  className="rounded-md border border-line px-2 py-1 text-xs font-medium text-muted hover:border-primary hover:text-primary"
+                                  className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-ink"
+                                  aria-label="Rediger kapittel"
                                 >
                                   Rediger
                                 </button>
                                 <button
                                   onClick={() => onRemoveChapter(l.id, c.id)}
-                                  className="rounded-md border border-line px-2 py-1 text-xs font-medium text-muted hover:border-danger hover:text-danger"
+                                  className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-danger"
+                                  aria-label="Fjern kapittel"
                                 >
                                   Fjern
                                 </button>

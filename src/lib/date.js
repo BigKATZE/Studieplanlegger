@@ -52,3 +52,33 @@ export function weekRange(date) {
   sun.setDate(mon.getDate() + 6)
   return `${fmtShort(mon)} – ${fmtShort(sun)}`
 }
+
+// ISO 'yyyy-mm-dd' -> visning 'dd/mm/yyyy' (for tekstfelt, uavhengig av nettleser-locale)
+export function isoToDisplayDate(iso) {
+  const m = (iso ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!m) return ''
+  return `${m[3]}/${m[2]}/${m[1]}`
+}
+
+// Visning 'dd/mm/yyyy' -> ISO 'yyyy-mm-dd', eller null hvis ugyldig/ufullstendig
+export function displayDateToIso(text) {
+  const m = (text ?? '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+  if (!m) return null
+  const [, dd, mm, yyyy] = m
+  const day = Number(dd)
+  const month = Number(mm)
+  const year = Number(yyyy)
+  if (month < 1 || month > 12) return null
+  const daysInMonth = new Date(year, month, 0).getDate()
+  if (day < 1 || day > daysInMonth) return null
+  return `${yyyy}-${mm}-${dd}`
+}
+
+// Sjekker at teksten er et gyldig 24-timers klokkeslett 'HH:mm'
+export function isValidTime(text) {
+  const m = (text ?? '').match(/^(\d{2}):(\d{2})$/)
+  if (!m) return false
+  const h = Number(m[1])
+  const min = Number(m[2])
+  return h <= 23 && min <= 59
+}

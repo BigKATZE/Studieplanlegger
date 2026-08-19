@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Modal } from './Modals'
-import { Select } from './ui'
+import { Select, DateField, TimeField } from './ui'
 import { checkFile } from '../lib/upload'
 import IcsImport from './IcsModal'
 
@@ -89,27 +89,23 @@ function PdfImport({ subjects, onImport, onClose }) {
                 >
                   ✕
                 </button>
-                <input
-                  type="date"
+                <DateField
                   value={r.date}
-                  onChange={(e) => patch(i, { date: e.target.value })}
-                  className={`${inputCls} w-36`}
+                  onChange={(v) => patch(i, { date: v })}
+                  className="w-28"
+                  ariaLabel="Dato"
                 />
-                <input
-                  type="time"
-                  lang="nb-NO"
+                <TimeField
                   value={r.start}
-                  onChange={(e) => patch(i, { start: e.target.value })}
-                  className={`${inputCls} w-24`}
-                  aria-label="Starttid"
+                  onChange={(v) => patch(i, { start: v })}
+                  className="w-20"
+                  ariaLabel="Starttid"
                 />
-                <input
-                  type="time"
-                  lang="nb-NO"
+                <TimeField
                   value={r.end}
-                  onChange={(e) => patch(i, { end: e.target.value })}
-                  className={`${inputCls} w-24`}
-                  aria-label="Sluttid"
+                  onChange={(v) => patch(i, { end: v })}
+                  className="w-20"
+                  ariaLabel="Sluttid"
                 />
                 <input
                   type="text"
