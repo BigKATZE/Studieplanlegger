@@ -52,13 +52,18 @@ export default function App() {
   const [editing, setEditing] = useState(null)
   const [filterSubjectId, setFilterSubjectId] = useState(null)
 
-  if (authStatus === 'loading' || !ready) {
+  if (authStatus === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-muted">Laster…</div>
     )
   }
   if (hasSupabase && !user) {
     return <Login />
+  }
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-muted">Laster…</div>
+    )
   }
 
   const closeModal = () => {

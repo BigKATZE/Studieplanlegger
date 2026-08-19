@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test'
 
+test('uten økt vises innlogging, ikke "Laster…"', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByRole('button', { name: 'Logg inn' })).toBeVisible()
+})
+
 test('app loads, pensum tab og fagfilter fungerer', async ({ page }) => {
   const user = {
     id: '00000000-0000-0000-0000-000000000000',
