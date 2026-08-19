@@ -98,7 +98,9 @@ export default function App() {
     addChapter: (lectureId, text) => update((d) => ({
       ...d,
       lectures: d.lectures.map((l) =>
-        l.id === lectureId ? { ...l, chapters: [...l.chapters, { id: uid(), text, done: false }] } : l,
+        l.id === lectureId && !l.chapters.some((c) => c.text.trim().toLowerCase() === text.trim().toLowerCase())
+          ? { ...l, chapters: [...l.chapters, { id: uid(), text, done: false }] }
+          : l,
       ),
     })),
     importLectures: (rows) => update((d) => ({

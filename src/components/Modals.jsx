@@ -38,6 +38,19 @@ function Field({ label, children }) {
   )
 }
 
+function parseChapters(input, existing) {
+  const seen = new Set((existing ?? []).map((c) => c.text.trim().toLowerCase()))
+  const out = []
+  for (const raw of input.split(',')) {
+    const text = raw.trim()
+    const key = text.toLowerCase()
+    if (!text || seen.has(key)) continue
+    seen.add(key)
+    out.push({ id: uid(), text, done: false })
+  }
+  return out
+}
+
 export function SubjectForm({ onAdd, onClose, initial }) {
   const [name, setName] = useState(initial?.name ?? '')
   const [code, setCode] = useState(initial?.code ?? '')
@@ -94,11 +107,7 @@ export function LectureForm({ subjects, onAdd, onClose, initial }) {
   const submit = (e) => {
     e.preventDefault()
     if (!subjectId || !date) return
-    const newCh = chapters
-      .split(',')
-      .map((c) => c.trim())
-      .filter(Boolean)
-      .map((text) => ({ id: uid(), text, done: false }))
+    const newCh = parseChapters(chapters, initial?.chapters)
     onAdd({
       ...(initial?.id ? { id: initial.id } : {}),
       subjectId,
@@ -159,11 +168,7 @@ export function ReadingForm({ subjects, lectures, onAdd, onClose, initial }) {
   const submit = (e) => {
     e.preventDefault()
     if (!subjectId || !title.trim()) return
-    const newCh = chapters
-      .split(',')
-      .map((c) => c.trim())
-      .filter(Boolean)
-      .map((text) => ({ id: uid(), text, done: false }))
+    const newCh = parseChapters(chapters, initial?.chapters)
     onAdd({
       ...(initial?.id ? { id: initial.id } : {}),
       subjectId,
