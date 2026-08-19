@@ -1,8 +1,11 @@
 import { test, expect } from '@playwright/test'
 
-test('uten økt vises innlogging, ikke "Laster…"', async ({ page }) => {
+test('uten økt brukes appen som gjest, med Logg inn-knapp', async ({ page }) => {
   await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Studieplanlegger' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Logg inn' })).toBeVisible()
+  await page.getByRole('button', { name: 'Logg inn' }).click()
+  await expect(page.getByRole('button', { name: 'Logg inn', exact: true })).toBeVisible()
 })
 
 test('app loads, pensum tab og fagfilter fungerer', async ({ page }) => {

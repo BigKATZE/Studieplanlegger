@@ -3,7 +3,7 @@ import { supabase, hasSupabase } from './supabase'
 import { load } from './store'
 
 const unscopedKey = 'oliarev-study-planner-v2'
-const cacheKey = (userId) => (hasSupabase ? `${unscopedKey}-${userId}` : unscopedKey)
+const cacheKey = (userId) => (hasSupabase && userId !== 'local' ? `${unscopedKey}-${userId}` : unscopedKey)
 
 function normalize(data) {
   if (!data) return data
@@ -71,7 +71,7 @@ export function useStore(user) {
       setReady(false)
       return
     }
-    if (!hasSupabase) {
+    if (!hasSupabase || userId === 'local') {
       setData((d) => d ?? load())
       setReady(true)
       return

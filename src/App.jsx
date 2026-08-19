@@ -47,19 +47,20 @@ function findTargetLecture(lectures, subject, date) {
 
 export default function App() {
   const { user, status: authStatus } = useAuth()
-  const { data, update, ready } = useStore(user)
+  const { data, update, ready } = useStore(user ?? { id: 'local' })
   const [tab, setTab] = useState('timeplan')
   const [modal, setModal] = useState(null)
   const [editing, setEditing] = useState(null)
   const [filterSubjectId, setFilterSubjectId] = useState(null)
+  const [showLogin, setShowLogin] = useState(false)
 
   if (authStatus === 'loading') {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-muted">Laster…</div>
     )
   }
-  if (hasSupabase && !user) {
-    return <Login />
+  if (hasSupabase && showLogin && !user) {
+    return <Login onBack={() => setShowLogin(false)} />
   }
   if (!ready) {
     return (
@@ -279,7 +280,17 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <header className="relative mx-auto max-w-5xl px-4 pb-6 pt-12">
-        {hasSupabase && (
+        {hasSupabase && !user && (
+          <div className="absolute right-4 top-4 flex gap-2">
+            <button
+              onClick={() => setShowLogin(true)}
+              className="rounded p-1 text-sm text-muted hover:text-ink"
+            >
+              Logg inn
+            </button>
+          </div>
+        )}
+        {hasSupabase && user && (
           <div className="absolute right-4 top-4 flex gap-2">
             <button
               onClick={() => openModal('password')}

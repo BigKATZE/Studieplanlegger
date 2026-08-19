@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase'
 const inputCls =
   'w-full rounded-md border border-line bg-surface px-3 py-2 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20'
 
-export default function Login() {
+export default function Login({ onBack }) {
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -67,6 +67,15 @@ export default function Login() {
         >
           {mode === 'login' ? 'Ny bruker? Opprett konto' : 'Har du konto? Logg inn'}
         </button>
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="mt-1 w-full text-center text-sm text-muted hover:text-ink"
+          >
+            Gå tilbake uten innlogging
+          </button>
+        )}
       </div>
     </div>
   )
