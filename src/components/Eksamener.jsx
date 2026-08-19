@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { SubjectChip, DeadlineBadge, WeekFilter } from './ui'
-import { isoWeek, weekRange, fmtShort } from '../lib/date'
+import { isoWeek, weekRangeByWeek, fmtShort, DEFAULT_WEEKS } from '../lib/date'
 
 export default function Eksamener({ exams, subjects, onRemoveExam, onEditExam }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
@@ -18,8 +18,9 @@ export default function Eksamener({ exams, subjects, onRemoveExam, onEditExam })
     return arr
   }, [exams])
 
+  const groupsByWeek = useMemo(() => new Map(groups.map((g) => [g.week, g])), [groups])
   const weeks = useMemo(() => groups.map((g) => g.week), [groups])
-  const visible = week == null ? groups : groups.filter((g) => g.week === week)
+  const renderWeeks = week == null ? DEFAULT_WEEKS : [week]
 
   return (
     <section className="mt-6">
@@ -32,20 +33,17 @@ export default function Eksamener({ exams, subjects, onRemoveExam, onEditExam })
           Ingen eksamener registrert. Legg til en eksamen eller skriv f.eks. «eksamen i bedøk 1. november» i feltet øverst.
         </p>
       )}
-      {visible.length === 0 && exams.length > 0 && (
-        <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
-          Ingen eksamener i uke {week}.
-        </p>
-      )}
       <div className="mt-3 space-y-6">
-        {visible.map((g) => (
-          <div key={g.week}>
-            <div className="flex items-baseline gap-3">
-              <h3 className="font-display text-lg font-semibold">Uke {g.week}</h3>
-              <span className="text-xs text-muted">{weekRange(g.date)}</span>
-            </div>
-            <div className="mt-2 space-y-2">
-              {g.exams.map((e) => {
+        {renderWeeks.map((w) => {
+          const g = groupsByWeek.get(w)
+          return (
+            <div key={w}>
+              <div className="flex items-baseline gap-3">
+                <h3 className="font-display text-lg font-semibold">Uke {w}</h3>
+                <span className="text-xs text-muted">{weekRangeByWeek(w)}</span>
+              </div>
+              <div className="mt-2 space-y-2">
+                {g?.exams.map((e) => {
                 const past = e.date < new Date().toISOString().slice(0, 10)
                 return (
                   <div
@@ -77,8 +75,9 @@ export default function Eksamener({ exams, subjects, onRemoveExam, onEditExam })
                 )
               })}
             </div>
-          </div>
-        ))}
+            </div>
+          )
+        })}
       </div>
       <p className="mt-4 text-xs text-muted">{fmtShort(new Date())} – viser eksamener sortert etter uke.</p>
     </section>

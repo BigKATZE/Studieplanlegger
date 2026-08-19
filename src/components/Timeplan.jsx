@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { isoWeek, weekRange, weekdayShort } from '../lib/date'
+import { isoWeek, weekRangeByWeek, weekdayShort, DEFAULT_WEEKS } from '../lib/date'
 import { SubjectChip, WeekFilter } from './ui'
 
 export default function Timeplan({ lectures, subjects, onToggleLecture, onToggleChapter, onUpdateChapter, onRemoveChapter, onRemoveLecture, onEditLecture }) {
@@ -18,8 +18,9 @@ export default function Timeplan({ lectures, subjects, onToggleLecture, onToggle
     return [...m.values()].sort((a, b) => a.date - b.date)
   }, [lectures])
 
+  const groupsByWeek = useMemo(() => new Map(groups.map((g) => [g.week, g])), [groups])
   const weeks = useMemo(() => groups.map((g) => g.week), [groups])
-  const visible = week == null ? groups : groups.filter((g) => g.week === week)
+  const renderWeeks = week == null ? DEFAULT_WEEKS : [week]
 
   return (
     <section className="mt-6">
@@ -32,20 +33,17 @@ export default function Timeplan({ lectures, subjects, onToggleLecture, onToggle
           Ingen forelesninger ennå. Importer en timeplan eller legg til manuelt.
         </p>
       )}
-      {visible.length === 0 && lectures.length > 0 && (
-        <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
-          Ingen forelesninger i uke {week}.
-        </p>
-      )}
       <div className="mt-3 space-y-6">
-        {visible.map((g) => (
-          <div key={g.week}>
-            <div className="flex items-baseline gap-3">
-              <h3 className="font-display text-lg font-semibold">Uke {g.week}</h3>
-              <span className="text-xs text-muted">{weekRange(g.date)}</span>
-            </div>
-            <div className="mt-2 space-y-2">
-              {g.lectures.map((l) => {
+        {renderWeeks.map((w) => {
+          const g = groupsByWeek.get(w)
+          return (
+            <div key={w}>
+              <div className="flex items-baseline gap-3">
+                <h3 className="font-display text-lg font-semibold">Uke {w}</h3>
+                <span className="text-xs text-muted">{weekRangeByWeek(w)}</span>
+              </div>
+              <div className="mt-2 space-y-2">
+                {g?.lectures.map((l) => {
                 const date = new Date(l.date)
                 const subject = subjectById[l.subjectId]
                 return (
@@ -144,8 +142,9 @@ export default function Timeplan({ lectures, subjects, onToggleLecture, onToggle
                 )
               })}
             </div>
-          </div>
-        ))}
+            </div>
+          )
+        })}
       </div>
     </section>
   )

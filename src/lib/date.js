@@ -1,4 +1,12 @@
 export const DEFAULT_WEEKS = Array.from({ length: 52 - 34 + 1 }, (_, i) => 34 + i)
+const DEFAULT_WEEK_YEAR = 2026
+
+export function weekRangeByWeek(week) {
+  const jan4 = new Date(Date.UTC(DEFAULT_WEEK_YEAR, 0, 4))
+  const day = jan4.getUTCDay() || 7
+  const w1 = new Date(Date.UTC(DEFAULT_WEEK_YEAR, 0, 4 - (day - 1)))
+  return weekRange(new Date(w1.getTime() + (week - 1) * 7 * 86400000))
+}
 
 export function isoWeek(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))

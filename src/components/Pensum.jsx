@@ -1,18 +1,10 @@
 import { useMemo, useState } from 'react'
 import { SubjectChip, WeekFilter } from './ui'
-import { isoWeek, weekRange } from '../lib/date'
+import { weekRangeByWeek, DEFAULT_WEEKS } from '../lib/date'
 
-export default function Pensum({ readings, subjects, lectures, onToggleReading, onToggleReadingChapter, onRemoveReading, onEditReading, onAdd }) {
+export default function Pensum({ readings, subjects, onToggleReading, onToggleReadingChapter, onRemoveReading, onEditReading, onAdd }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
   const [week, setWeek] = useState(null)
-  const weekRep = useMemo(() => {
-    const map = new Map()
-    lectures.forEach((l) => {
-      const w = isoWeek(new Date(l.date))
-      if (!map.has(w)) map.set(w, new Date(l.date))
-    })
-    return map
-  }, [lectures])
 
   const groups = useMemo(() => {
     const map = new Map()
@@ -24,8 +16,10 @@ export default function Pensum({ readings, subjects, lectures, onToggleReading, 
     return [...map.entries()].sort((a, b) => (a[0] === 'none' ? 1 : b[0] === 'none' ? -1 : +a[0] - +b[0]))
   }, [readings])
 
+  const noneItems = useMemo(() => groups.find(([wk]) => wk === 'none')?.[1] ?? [], [groups])
+  const groupsByWeek = useMemo(() => new Map(groups.filter(([wk]) => wk !== 'none').map(([wk, items]) => [+wk, items])), [groups])
   const weeks = useMemo(() => groups.map(([wk]) => +wk).filter((w) => !Number.isNaN(w)), [groups])
-  const visible = week == null ? groups : groups.filter(([wk]) => wk !== 'none' && +wk === week)
+  const renderWeeks = week == null ? DEFAULT_WEEKS : [week]
 
   return (
     <section className="mt-6">
@@ -41,19 +35,50 @@ export default function Pensum({ readings, subjects, lectures, onToggleReading, 
           Ingen pensum registrert. Legg til pensum eller skriv f.eks. «pensum kapittel 3 i forretningsjus» i feltet øverst.
         </p>
       )}
-      {visible.length === 0 && readings.length > 0 && (
-        <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
-          Ingen pensum i uke {week}.
-        </p>
+      {week == null && noneItems.length > 0 && (
+        <div className="mt-3">
+          <div className="flex items-baseline gap-3">
+            <h3 className="font-display text-lg font-semibold">Uten uke</h3>
+          </div>
+          <div className="mt-2 space-y-2">
+            {noneItems.map((r) => (
+              <div key={r.id} className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-line bg-surface p-4 ${r.done ? 'opacity-50' : ''}`}>
+                <button
+                  onClick={() => onToggleReading(r.id)}
+                  className="flex h-5 w-5 items-center justify-center rounded border border-line text-xs text-secondary"
+                  aria-label="Marker som lest"
+                >
+                  {r.done ? '✓' : ''}
+                </button>
+                <span className={`text-sm font-medium ${r.done ? 'text-muted line-through' : ''}`}>{r.title}</span>
+                <SubjectChip subject={subjectById[r.subjectId]} />
+                <button
+                  onClick={() => onEditReading(r)}
+                  className="ml-auto rounded p-1 text-xs text-muted hover:bg-paper hover:text-ink"
+                  aria-label="Rediger pensum"
+                >
+                  Rediger
+                </button>
+                <button
+                  onClick={() => onRemoveReading(r.id)}
+                  className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-danger"
+                  aria-label="Fjern pensum"
+                >
+                  Fjern
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
       <div className="mt-3 space-y-6">
-        {visible.map(([wk, items]) => {
-          const rep = wk !== 'none' ? weekRep.get(+wk) : null
+        {renderWeeks.map((w) => {
+          const items = groupsByWeek.get(w) ?? []
           return (
-            <div key={wk}>
+            <div key={w}>
               <div className="flex items-baseline gap-3">
-                <h3 className="font-display text-lg font-semibold">{wk === 'none' ? 'Uten uke' : `Uke ${wk}`}</h3>
-                {rep && <span className="text-xs text-muted">{weekRange(rep)}</span>}
+                <h3 className="font-display text-lg font-semibold">Uke {w}</h3>
+                <span className="text-xs text-muted">{weekRangeByWeek(w)}</span>
               </div>
               <div className="mt-2 space-y-2">
                 {items.map((r) => (

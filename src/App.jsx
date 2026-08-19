@@ -392,7 +392,6 @@ export default function App() {
             <Pensum
               readings={bySubject(data.readings)}
               subjects={data.subjects}
-              lectures={data.lectures}
               onToggleReading={actions.toggleReading}
               onToggleReadingChapter={actions.toggleReadingChapter}
               onRemoveReading={actions.removeReading}
