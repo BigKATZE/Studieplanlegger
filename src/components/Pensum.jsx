@@ -70,7 +70,9 @@ export default function Pensum({ readings, subjects, lectures, onToggleReading, 
                       Fjern
                     </button>
                     {(r.chapters?.length ?? 0) > 0 && (
-                      <ul className="mt-1 w-full space-y-1 pl-6">
+                      <div className="mt-1 w-full space-y-1 pl-6">
+                        <p className="text-xs font-medium text-muted">{(r.chapters?.length ?? 0) === 1 ? 'Kapittel:' : 'Kapitler:'}</p>
+                        <ul className="space-y-1">
                         {r.chapters.map((c) => (
                           <li key={c.id}>
                             <label className="flex cursor-pointer items-center gap-2 text-sm">
@@ -85,6 +87,7 @@ export default function Pensum({ readings, subjects, lectures, onToggleReading, 
                           </li>
                         ))}
                       </ul>
+                      </div>
                     )}
                   </div>
                 ))}
