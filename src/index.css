@@ -6,7 +6,7 @@
   --font-mono: "PT Mono", ui-monospace, SFMono-Regular, monospace;
 
   --color-ink: #111827;
-  --color-primary: #6d28d9;
+  --color-primary: #111111;
   --color-secondary: #8b5cf6;
   --color-success: #16a34a;
   --color-warning: #d97706;
@@ -19,7 +19,7 @@
 
 :root.dark {
   --color-ink: #f3f4f6;
-  --color-primary: #8b5cf6;
+  --color-primary: #333333;
   --color-secondary: #a78bfa;
   --color-success: #22c55e;
   --color-warning: #f59e0b;
