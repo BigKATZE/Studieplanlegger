@@ -1,6 +1,9 @@
 import { useState } from 'react'
-import { load, save, uid, pickSubjectColor } from './lib/store'
+import { uid, pickSubjectColor } from './lib/store'
 import { fmtShort, iso, isoWeek } from './lib/date'
+import { useAuth, useStore } from './lib/sync'
+import { supabase, hasSupabase } from './lib/supabase'
+import Login from './components/Login'
 import SubjectPanel from './components/SubjectPanel'
 import Timeplan from './components/Timeplan'
 import Pensum from './components/Pensum'
@@ -10,16 +13,6 @@ import SmartInput from './components/SmartInput'
 import ImportModal from './components/ImportModal'
 import { Modal, SubjectForm, LectureForm, AssignmentForm, ExamForm, ReadingForm } from './components/Modals'
 import { DeadlineStrip, SubjectFilter } from './components/ui'
-
-function useStore() {
-  const [data, setData] = useState(load)
-  const update = (fn) => setData((prev) => {
-    const next = fn(prev)
-    save(next)
-    return next
-  })
-  return [data, update]
-}
 
 const TABS = [
   { id: 'overview', label: 'Oversikt' },
@@ -52,11 +45,21 @@ function findTargetLecture(lectures, subject, date) {
 }
 
 export default function App() {
-  const [data, update] = useStore()
+  const { user, status: authStatus } = useAuth()
+  const { data, update, ready } = useStore(user)
   const [tab, setTab] = useState('timeplan')
   const [modal, setModal] = useState(null)
   const [editing, setEditing] = useState(null)
   const [filterSubjectId, setFilterSubjectId] = useState(null)
+
+  if (authStatus === 'loading' || !ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-muted">Laster…</div>
+    )
+  }
+  if (hasSupabase && !user) {
+    return <Login />
+  }
 
   const closeModal = () => {
     setModal(null)
@@ -269,7 +272,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen">
-      <header className="mx-auto max-w-5xl px-4 pb-6 pt-12">
+      <header className="relative mx-auto max-w-5xl px-4 pb-6 pt-12">
+        {hasSupabase && (
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="absolute right-4 top-4 rounded p-1 text-sm text-muted hover:text-ink"
+          >
+            Logg ut
+          </button>
+        )}
         <h1 className="font-display text-4xl font-bold tracking-tight">Studieplanlegger</h1>
         <p className="mt-1 text-sm text-muted">Timeplan, pensum, arbeidskrav og eksamener – uke for uke.</p>
 
