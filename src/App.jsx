@@ -3,13 +3,14 @@ import { load, save, uid, pickSubjectColor } from './lib/store'
 import { fmtShort, iso } from './lib/date'
 import SubjectPanel from './components/SubjectPanel'
 import Timeplan from './components/Timeplan'
+import Pensum from './components/Pensum'
 import Gjøremål from './components/Gjøremål'
 import Eksamener from './components/Eksamener'
 import SmartInput from './components/SmartInput'
 import ImportModal from './components/ImportModal'
 import CanvasModal from './components/CanvasModal'
 import IcsModal from './components/IcsModal'
-import { Modal, SubjectForm, LectureForm, AssignmentForm, ExamForm } from './components/Modals'
+import { Modal, SubjectForm, LectureForm, AssignmentForm, ExamForm, ReadingForm } from './components/Modals'
 import { DeadlineStrip, SubjectFilter } from './components/ui'
 
 function useStore() {
@@ -25,6 +26,7 @@ function useStore() {
 const TABS = [
   { id: 'overview', label: 'Oversikt' },
   { id: 'timeplan', label: 'Timeplan' },
+  { id: 'reading', label: 'Pensum' },
   { id: 'tasks', label: 'Gjøremål' },
   { id: 'exams', label: 'Eksamener' },
 ]
@@ -75,6 +77,10 @@ export default function App() {
     addExam: (e) => update((d) => ({
       ...d,
       exams: [...d.exams, { id: uid(), ...e }],
+    })),
+    addReading: (r) => update((d) => ({
+      ...d,
+      readings: [...d.readings, { id: uid(), ...r }],
     })),
     addChapter: (lectureId, text) => update((d) => ({
       ...d,
@@ -178,6 +184,14 @@ export default function App() {
       ...d,
       exams: d.exams.filter((e) => e.id !== id),
     })),
+    toggleReading: (id) => update((d) => ({
+      ...d,
+      readings: d.readings.map((r) => (r.id === id ? { ...r, done: !r.done } : r)),
+    })),
+    removeReading: (id) => update((d) => ({
+      ...d,
+      readings: d.readings.filter((r) => r.id !== id),
+    })),
   }
 
   const applySmartAction = (action) => {
@@ -200,6 +214,18 @@ export default function App() {
         topic: action.topic,
       })
       return { ok: true, message: `La til forelesning i ${action.subject.short} ${fmtShort(action.date)} kl. ${action.time}.` }
+    }
+    if (action.type === 'reading') {
+      actions.addReading({
+        subjectId: action.subject.id,
+        title: action.label,
+        date: action.date ? iso(action.date) : '',
+        done: false,
+      })
+      return {
+        ok: true,
+        message: `La til «${action.label}» i ${action.subject.short}${action.date ? `, til ${fmtShort(action.date)}` : ''}.`,
+      }
     }
     const target = findTargetLecture(data.lectures, action.subject, action.date)
     if (!target) {
@@ -240,6 +266,7 @@ export default function App() {
           <button onClick={() => setModal('ics')} className="btn-primary">Importer iCal (uten token)</button>
           <button onClick={() => setModal('canvas')} className="btn-ghost">Importer fra Canvas (token)</button>
           <button onClick={() => setModal('lecture')} className="btn-ghost">Ny forelesning</button>
+          <button onClick={() => setModal('reading')} className="btn-ghost">Nytt pensum</button>
           <button onClick={() => setModal('assignment')} className="btn-ghost">Nytt arbeidskrav</button>
           <button onClick={() => setModal('exam')} className="btn-ghost">Ny eksamen</button>
           <button onClick={() => setModal('subject')} className="btn-ghost">Nytt fag</button>
@@ -272,6 +299,18 @@ export default function App() {
               onToggleLecture={actions.toggleLecture}
               onToggleChapter={actions.toggleChapter}
               onRemoveLecture={actions.removeLecture}
+            />
+          </>
+        )}
+
+        {tab === 'reading' && (
+          <>
+            <SubjectFilter subjects={data.subjects} active={filterSubjectId} onChange={setFilterSubjectId} />
+            <Pensum
+              readings={bySubject(data.readings)}
+              subjects={data.subjects}
+              onToggleReading={actions.toggleReading}
+              onRemoveReading={actions.removeReading}
             />
           </>
         )}
@@ -313,6 +352,11 @@ export default function App() {
       {modal === 'assignment' && (
         <Modal title="Nytt arbeidskrav" onClose={() => setModal(null)}>
           <AssignmentForm subjects={data.subjects} onAdd={actions.addAssignment} onClose={() => setModal(null)} />
+        </Modal>
+      )}
+      {modal === 'reading' && (
+        <Modal title="Nytt pensum" onClose={() => setModal(null)}>
+          <ReadingForm subjects={data.subjects} onAdd={actions.addReading} onClose={() => setModal(null)} />
         </Modal>
       )}
       {modal === 'exam' && (

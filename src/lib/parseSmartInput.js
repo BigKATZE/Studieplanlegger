@@ -5,6 +5,7 @@ const MONTHS = {
 }
 const ASSIGNMENT_TITLE = /(arbeidskrav\s*\d*|oppgave\s*\d*|oblig(?:atorisk)?\s*\d*|innlevering\s*\d*|prøve\s*\d*|test\s*\d*)/
 const EXAM_TITLE = /(hjemmeeksamen|skriftlig\s+skoleeksamen|muntlig\s+eksamen|skoleeksamen|eksamen)/
+const ENTRY_KEYWORDS = /(eksamen|arbeidskrav|innlevering|oblig|oppgave|prøve|test|forelesning|pensum|les\s+kapittel|lese\s+kapittel|kapittel)/
 
 function norm(s) {
   return s.toLowerCase().replace(/ø/g, 'o').replace(/æ/g, 'a').replace(/å/g, 'a').replace(/[^a-z0-9]/g, '')
@@ -24,6 +25,10 @@ export function matchSubject(low, subjects) {
   return null
 }
 
+function isoStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function nextWeekday(name) {
   const target = WEEKDAYS[name]
   const today = new Date()
@@ -38,7 +43,7 @@ function nextWeekday(name) {
 function matchDate(low) {
   const isoM = low.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/)
   if (isoM) return new Date(+isoM[1], +isoM[2] - 1, +isoM[3])
-  const dmy = low.match(/\b(\d{1,2})[.\/](\d{1,2})(?:[.\/](\d{2,4}))?\b/)
+  const dmy = low.match(/\b(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?\b/)
   if (dmy) {
     const month = +dmy[2]
     if (month >= 1 && month <= 12) {
@@ -67,6 +72,32 @@ function matchDate(low) {
   return null
 }
 
+function matchDates(low) {
+  const re = /\b(\d{1,2})\.\s*(?:og\s*)?(\d{1,2})\.\s*([a-zæøå]+)\b|\b(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?\b|\b(\d{4})-(\d{1,2})-(\d{1,2})\b|\b(\d{1,2})\.\s*([a-zæøå]+)\b/g
+  const out = []
+  let m
+  while ((m = re.exec(low))) {
+    if (m[1] && m[3]) {
+      out.push(new Date(new Date().getFullYear(), MONTHS[m[3]] - 1, +m[1]))
+      out.push(new Date(new Date().getFullYear(), MONTHS[m[3]] - 1, +m[2]))
+    } else if (m[4] && m[5]) {
+      const y = m[6] ? (m[6].length === 2 ? 2000 + +m[6] : +m[6]) : new Date().getFullYear()
+      if (+m[5] >= 1 && +m[5] <= 12) out.push(new Date(y, +m[5] - 1, +m[4]))
+    } else if (m[7] && m[8] && m[9]) {
+      out.push(new Date(+m[7], +m[8] - 1, +m[9]))
+    } else if (m[10] && m[11] && MONTHS[m[11]] !== undefined) {
+      out.push(new Date(new Date().getFullYear(), MONTHS[m[11]] - 1, +m[10]))
+    }
+  }
+  const seen = new Set()
+  return out.filter((d) => {
+    const k = isoStr(d)
+    if (seen.has(k)) return false
+    seen.add(k)
+    return true
+  })
+}
+
 function matchTime(low) {
   const m = low.match(/kl\.?\s*(\d{1,2})(?:[:.](\d{2}))?/)
   if (m) return `${m[1].padStart(2, '0')}:${m[2] ?? '00'}`
@@ -80,7 +111,7 @@ function stripNoise(low, subjects) {
   s = s.replace(/\b(mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag)\b/g, ' ')
   s = s.replace(/\bi\s+morgen\b|\bimorgen\b|\bovermorgen\b/g, ' ')
   s = s.replace(/\b\d{4}-\d{1,2}-\d{1,2}\b/g, ' ')
-  s = s.replace(/\b\d{1,2}[.\/]\d{1,2}(?:[.\/]\d{2,4})?\b/g, ' ')
+  s = s.replace(/\b\d{1,2}[./]\d{1,2}(?:[./]\d{2,4})?\b/g, ' ')
   s = s.replace(/\b\d{1,2}[:.]\d{2}\b/g, ' ')
   s = s.replace(/\bkl\.?/g, ' ')
   s = s.replace(/til\s+forelesningen?\b/g, ' ')
@@ -98,23 +129,36 @@ function capitalize(s) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : s
 }
 
-export function parseSmartInput(raw, subjects) {
-  const input = raw.trim()
-  if (!input) return { ok: false, error: 'Skriv noe først.' }
-  const low = input.toLowerCase()
+function splitEntries(raw) {
+  const parts = raw.split(',').map((s) => s.trim()).filter(Boolean)
+  const entries = []
+  for (const p of parts) {
+    if (entries.length && !ENTRY_KEYWORDS.test(p.toLowerCase())) {
+      entries[entries.length - 1] += ', ' + p
+    } else {
+      entries.push(p)
+    }
+  }
+  return entries
+}
 
+function parseEntry(input, subjects) {
+  const low = input.toLowerCase()
   const subject = matchSubject(low, subjects)
-  const date = matchDate(low)
+  const dates = matchDates(low)
+  const date = dates[0] ?? matchDate(low)
   const time = matchTime(low)
   const chapterMatch = low.match(/kap(?:ittel)?\.?\s*(\d{1,2}(?:\s*[-–]\s*\d{1,2})?)/)
 
   const hasExamKw = /eksamen/.test(low)
   const hasAssignmentKw = /arbeidskrav|innlevering|oblig|levere inn|prøve|test|oppgave/.test(low)
   const hasLectureKw = /forelesning|timeplan|foreleser|time\s+kl/.test(low)
+  const hasReadingKw = /pensum/.test(low)
 
   let type
   if (hasExamKw) type = 'exam'
   else if (hasAssignmentKw && !hasLectureKw) type = 'assignment'
+  else if (hasReadingKw) type = 'reading'
   else if (chapterMatch || /\bles\b|\blese\b/.test(low)) type = 'chapter'
   else if (hasLectureKw || time) type = 'lecture'
   else {
@@ -126,18 +170,29 @@ export function parseSmartInput(raw, subjects) {
 
   if (type === 'assignment') {
     if (!subject) return { ok: false, error: 'Fant ikke hvilket fag det gjelder. Skriv f.eks. «i forretningsjus».' }
-    if (!date) return { ok: false, error: 'Mangler frist. Skriv f.eks. «frist 1. oktober».' }
+    if (!dates.length) return { ok: false, error: 'Mangler frist. Skriv f.eks. «frist 1. oktober».' }
     const titleMatch = low.match(ASSIGNMENT_TITLE)
     const title = titleMatch ? capitalize(titleMatch[1].trim()) : 'Gjøremål'
-    return { ok: true, action: { type: 'assignment', subject, title, date } }
+    return { ok: true, actions: dates.map((d) => ({ type: 'assignment', subject, title, date: d })) }
   }
 
   if (type === 'exam') {
     if (!subject) return { ok: false, error: 'Fant ikke hvilket fag eksamen er i. Skriv f.eks. «i forretningsjus».' }
-    if (!date) return { ok: false, error: 'Mangler eksamensdato. Skriv f.eks. «1. november».' }
+    if (!dates.length) return { ok: false, error: 'Mangler eksamensdato. Skriv f.eks. «1. november».' }
     const titleMatch = low.match(EXAM_TITLE)
     const title = titleMatch ? capitalize(titleMatch[1].trim()) : 'Eksamen'
-    return { ok: true, action: { type: 'exam', subject, title, date, time: time ?? '' } }
+    return { ok: true, actions: dates.map((d) => ({ type: 'exam', subject, title, date: d, time: time ?? '' })) }
+  }
+
+  if (type === 'reading') {
+    if (!subject) return { ok: false, error: 'Fant ikke hvilket fag det gjelder. Skriv f.eks. «pensum kapittel 3 i forretningsjus».' }
+    let label = chapterMatch ? 'Kapittel ' + chapterMatch[1].replace(/\s+/g, '') : null
+    if (!label) {
+      label = stripNoise(low, subjects).replace(/^pensum\s*/i, '').replace(/^les\s*/i, '') || 'Pensum'
+      label = capitalize(label)
+    }
+    const dlist = dates.length ? dates : [date]
+    return { ok: true, actions: dlist.map((d) => ({ type: 'reading', subject, date: d, label })) }
   }
 
   if (type === 'chapter') {
@@ -149,11 +204,21 @@ export function parseSmartInput(raw, subjects) {
       label = stripNoise(low, subjects).replace(/^les\s*/, '') || 'Pensum'
       label = capitalize(label)
     }
-    return { ok: true, action: { type: 'chapter', subject, date, label } }
+    return { ok: true, actions: [{ type: 'chapter', subject, date, label }] }
   }
 
   if (!subject) return { ok: false, error: 'Fant ikke hvilket fag forelesningen er i. Skriv f.eks. «i bedøk».' }
   if (!date) return { ok: false, error: 'Mangler dato. Skriv f.eks. «tirsdag» eller «1. oktober».' }
   const topic = capitalize(stripNoise(low, subjects).replace(/^forelesning\s*/, '').trim()) || ''
-  return { ok: true, action: { type: 'lecture', subject, date, time: time ?? '10:00', topic } }
+  return { ok: true, actions: [{ type: 'lecture', subject, date, time: time ?? '10:00', topic }] }
+}
+
+export function parseSmartInput(raw, subjects) {
+  const input = raw.trim()
+  if (!input) return { ok: false, error: 'Skriv noe først.' }
+  const entries = splitEntries(input)
+  const parsed = entries.map((e) => parseEntry(e, subjects))
+  const failed = parsed.findIndex((r) => !r.ok)
+  if (failed !== -1) return { ok: false, error: parsed[failed].error }
+  return { ok: true, actions: parsed.flatMap((r) => r.actions) }
 }

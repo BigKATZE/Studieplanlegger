@@ -62,7 +62,13 @@ function seed() {
     { id: uid(), subjectId: subjects[2].id, title: 'Skriftlig skoleeksamen', date: '2026-12-10', time: '09:00' },
   ]
 
-  return { subjects, lectures, assignments, exams }
+  const readings = [
+    { id: uid(), subjectId: jur, title: 'Kapittel 1–2 – Rettssystemet og rettskildene', date: '2026-08-17', done: false },
+    { id: uid(), subjectId: jur, title: 'Kapittel 3 – Avtaleloven', date: '2026-08-28', done: false },
+    { id: uid(), subjectId: subjects[2].id, title: 'Kapittel 5 – Årsregnskap', date: '2026-09-08', done: false },
+  ]
+
+  return { subjects, lectures, assignments, exams, readings }
 }
 
 export function load() {
@@ -71,6 +77,7 @@ export function load() {
     if (raw) {
       const data = JSON.parse(raw)
       if (!Array.isArray(data.exams)) data.exams = []
+      if (!Array.isArray(data.readings)) data.readings = []
       return data
     }
   } catch {

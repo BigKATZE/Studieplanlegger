@@ -18,12 +18,15 @@ export default function SmartInput({ subjects, onApply }) {
   }
 
   const apply = () => {
-    const res = onApply(result.action)
-    setMsg(res)
-    if (res.ok) {
-      setValue('')
-      setResult(null)
+    const res = result.actions.map((a) => onApply(a))
+    const failed = res.find((r) => !r.ok)
+    if (failed) {
+      setMsg(failed)
+      return
     }
+    setMsg({ ok: true, message: res.map((r) => r.message).join(' ') })
+    setValue('')
+    setResult(null)
   }
 
   return (
@@ -32,7 +35,7 @@ export default function SmartInput({ subjects, onApply }) {
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="Skriv naturlig – f.eks. «arbeidskrav 1 i forretningsjus, frist 1. oktober», «eksamen i bedøk 1. november» eller «les kapittel 4 til tirsdag»"
+          placeholder="Skriv naturlig – f.eks. «arbeidskrav 1 i forretningsjus, frist 1. oktober», «eksamen i bedøk 1. november og 3. november» eller «pensum kapittel 3 i forretningsjus». Skill flere med komma."
           className={inputCls}
           aria-label="Generell input"
         />
@@ -43,9 +46,15 @@ export default function SmartInput({ subjects, onApply }) {
         <p className="mt-2 rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{result.error}</p>
       )}
       {result && result.ok && !msg && (
-        <div className="mt-2 flex flex-wrap items-center gap-3 rounded-md border border-line bg-surface px-3 py-2">
-          <Preview action={result.action} />
-          <button onClick={apply} className="btn-primary ml-auto">Legg til</button>
+        <div className="mt-2 rounded-md border border-line bg-surface px-3 py-2">
+          <ul className="space-y-1">
+            {result.actions.map((a, i) => (
+              <li key={i} className="flex flex-wrap items-center gap-3 text-sm">
+                <Preview action={a} />
+              </li>
+            ))}
+          </ul>
+          <button onClick={apply} className="btn-primary mt-2">Legg til ({result.actions.length})</button>
         </div>
       )}
       {msg && (
@@ -60,29 +69,37 @@ export default function SmartInput({ subjects, onApply }) {
 function Preview({ action }) {
   if (action.type === 'assignment') {
     return (
-      <span className="text-sm">
+      <span>
         Arbeidskrav <b>{action.title}</b> i {action.subject.short}, frist {fmtShort(action.date)}
       </span>
     )
   }
   if (action.type === 'exam') {
     return (
-      <span className="text-sm">
+      <span>
         Eksamen: <b>{action.title}</b> i {action.subject.short} {fmtShort(action.date)}
         {action.time ? ` kl. ${action.time}` : ''}
       </span>
     )
   }
+  if (action.type === 'reading') {
+    return (
+      <span>
+        Pensum: <b>{action.label}</b> i {action.subject.short}
+        {action.date ? `, til ${fmtShort(action.date)}` : ''}
+      </span>
+    )
+  }
   if (action.type === 'lecture') {
     return (
-      <span className="text-sm">
+      <span>
         Forelesning i <b>{action.subject.short}</b> {fmtShort(action.date)} kl. {action.time}
         {action.topic ? ` – ${action.topic}` : ''}
       </span>
     )
   }
   return (
-    <span className="text-sm">
+    <span>
       Kapittel <b>{action.label}</b>
       {action.subject ? ` i ${action.subject.short}` : ''}
       {action.date ? ` (${fmtShort(action.date)})` : ''} – legges til nærmeste forelesning

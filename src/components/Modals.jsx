@@ -135,6 +135,39 @@ export function LectureForm({ subjects, onAdd, onClose }) {
   )
 }
 
+export function ReadingForm({ subjects, onAdd, onClose }) {
+  const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? '')
+  const [title, setTitle] = useState('')
+  const [date, setDate] = useState('')
+  const submit = (e) => {
+    e.preventDefault()
+    if (!subjectId || !title.trim()) return
+    onAdd({ subjectId, title: title.trim(), date, done: false })
+    onClose()
+  }
+  return (
+    <form onSubmit={submit} className="space-y-4">
+      <Field label="Fag">
+        <select className={inputCls} value={subjectId} onChange={(e) => setSubjectId(e.target.value)} required>
+          {subjects.map((s) => (
+            <option key={s.id} value={s.id}>{s.short}</option>
+          ))}
+        </select>
+      </Field>
+      <Field label="Pensum">
+        <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder="Kapittel 3 og 4 – Avtaleloven" />
+      </Field>
+      <Field label="Til (dato, valgfritt)">
+        <input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} />
+      </Field>
+      <div className="flex justify-end gap-2 pt-2">
+        <button type="button" onClick={onClose} className="btn-ghost">Avbryt</button>
+        <button type="submit" className="btn-primary">Legg til pensum</button>
+      </div>
+    </form>
+  )
+}
+
 export function AssignmentForm({ subjects, onAdd, onClose }) {
   const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? '')
   const [title, setTitle] = useState('')
