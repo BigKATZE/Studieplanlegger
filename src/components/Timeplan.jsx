@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { isoWeek, weekRangeByWeek, weekdayShort, DEFAULT_WEEKS } from '../lib/date'
+import { isoWeek, weekRangeByWeek, weekdayShort, fmtShort, DEFAULT_WEEKS } from '../lib/date'
 import { SubjectChip, WeekFilter } from './ui'
 
 export default function Timeplan({ lectures, subjects, onToggleLecture, onToggleChapter, onUpdateChapter, onRemoveChapter, onRemoveLecture, onEditLecture }) {
@@ -51,31 +51,35 @@ export default function Timeplan({ lectures, subjects, onToggleLecture, onToggle
                 return (
                   <div key={l.id} className="rounded-lg border border-line bg-surface p-4">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                      <label className="flex cursor-pointer items-center gap-2 text-sm" title="Merket forelesning = deltatt / gjennomgått">
-                        <input
-                          type="checkbox"
-                          checked={l.done}
-                          onChange={() => onToggleLecture(l.id)}
-                          className="h-4 w-4 accent-secondary"
-                        />
-                        <span className="w-28 font-medium">
-                          {weekdayShort(date)} {date.getDate()}.{date.getMonth() + 1}.
-                        </span>
-                      </label>
-                      <span className="text-sm">{l.start}–{l.end}</span>
+                      <div className="flex items-center gap-1.5">
+                        <label className="flex cursor-pointer items-center gap-2 text-sm" title="Merket forelesning = deltatt / gjennomgått">
+                          <input
+                            type="checkbox"
+                            checked={l.done}
+                            onChange={() => onToggleLecture(l.id)}
+                            className="h-4 w-4 accent-secondary"
+                          />
+                          <span className="font-medium">
+                            {weekdayShort(date)} {fmtShort(date)}
+                          </span>
+                        </label>
+                        <span className="text-sm">{l.start}–{l.end}</span>
+                      </div>
                       {subject && <SubjectChip subject={subject} />}
                       {l.room && <span className="font-mono text-xs text-muted">{l.room}</span>}
                       {l.lecturer && <span className="text-xs text-muted">{l.lecturer}</span>}
-                      <div className="flex items-center gap-2">
+                      <div className="ml-auto flex items-center gap-2">
                         <button
                           onClick={() => onEditLecture(l)}
-                          className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:border-primary hover:text-primary"
+                          className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-ink"
+                          aria-label="Rediger forelesning"
                         >
                           Rediger
                         </button>
                         <button
                           onClick={() => onRemoveLecture(l.id)}
-                          className="rounded-md border border-line px-2 py-1 text-xs font-medium text-muted hover:border-danger hover:text-danger"
+                          className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-danger"
+                          aria-label="Fjern forelesning"
                         >
                           Fjern
                         </button>

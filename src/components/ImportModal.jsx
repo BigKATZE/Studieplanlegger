@@ -97,6 +97,7 @@ function PdfImport({ subjects, onImport, onClose }) {
                 />
                 <input
                   type="time"
+                  lang="nb-NO"
                   value={r.start}
                   onChange={(e) => patch(i, { start: e.target.value })}
                   className={`${inputCls} w-24`}
@@ -104,6 +105,7 @@ function PdfImport({ subjects, onImport, onClose }) {
                 />
                 <input
                   type="time"
+                  lang="nb-NO"
                   value={r.end}
                   onChange={(e) => patch(i, { end: e.target.value })}
                   className={`${inputCls} w-24`}

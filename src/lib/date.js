@@ -25,7 +25,7 @@ export function isoWeek(date) {
 }
 
 export function fmtShort(date) {
-  return date.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })
+  return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`
 }
 
 export function weekdayShort(date) {

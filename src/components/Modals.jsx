@@ -150,10 +150,10 @@ export function LectureForm({ subjects, onAdd, onClose, initial }) {
           <input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} required />
         </Field>
         <Field label="Fra">
-          <input type="time" className={inputCls} value={start} onChange={(e) => setStart(e.target.value)} />
+          <input type="time" lang="nb-NO" className={inputCls} value={start} onChange={(e) => setStart(e.target.value)} />
         </Field>
         <Field label="Til">
-          <input type="time" className={inputCls} value={end} onChange={(e) => setEnd(e.target.value)} />
+          <input type="time" lang="nb-NO" className={inputCls} value={end} onChange={(e) => setEnd(e.target.value)} />
         </Field>
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -310,7 +310,7 @@ export function ExamForm({ subjects, onAdd, onClose, initial }) {
           <input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value)} required />
         </Field>
         <Field label="Starttid (valgfritt)">
-          <input type="time" className={inputCls} value={time} onChange={(e) => setTime(e.target.value)} />
+          <input type="time" lang="nb-NO" className={inputCls} value={time} onChange={(e) => setTime(e.target.value)} />
         </Field>
       </div>
       <div className="flex justify-end gap-2 pt-2">
