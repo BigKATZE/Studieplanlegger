@@ -39,8 +39,9 @@ export function iso(date) {
 export function daysUntil(dateStr) {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const d = new Date(dateStr)
-  return Math.round((d - today) / 86400000)
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  return Math.round((date - today) / 86400000)
 }
 
 export function weekRange(date) {
