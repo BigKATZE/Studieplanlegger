@@ -1,16 +1,54 @@
-# React + Vite
+# Studieplanlegger
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+En personlig studieplanlegger for timeplan, pensum, arbeidskrav og eksamener – uke for uke. Bygget med React + Vite + Tailwind CSS v4, med innlogging og synk på tvers av enheter via Supabase.
 
-Currently, two official plugins are available:
+## Funksjoner
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Uke-for-uke-visning av forelesninger, pensum, gjøremål og eksamener (skoleåret krysser kalenderår, uke 34 → 24)
+- Naturlig språk-input: «arbeidskrav 1 i forretningsjus, frist 1. oktober» → legger til oppgave med riktig fag og frist
+- PDF- og ICS-import, inkludert eksterne kalenderfeeder via en Supabase Edge Function (`ics-proxy`)
+- Gjestemodus uten konto, eller innlogging for synk på tvers av enheter (realtime via Supabase)
+- Angre-toast ved sletting, dark/light-modus, tilgjengelighetsstøtte
 
-## React Compiler
+## Komme i gang
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev
+```
 
-## Expanding the Oxlint configuration
+## Miljøvariabler
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Kopier inn verdiene dine i `.env.local` (gitignored):
+
+```
+VITE_SUPABASE_URL=https://<prosjektref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<publishable/anon-nøkkel>
+```
+
+Finner du disse i Supabase-dashboardet under **Project Settings → API**. `service_role`-nøkkelen skal aldri brukes i frontend.
+
+## Supabase-oppsett
+
+1. Opprett prosjektet i Supabase-dashboardet.
+2. Sett `VITE_SUPABASE_URL` og `VITE_SUPABASE_ANON_KEY` som beskrevet over, både lokalt og i Vercel-prosjektets env-variabler.
+3. Opprett tabellen `user_data` og aktiver RLS – SQL-en ligger i [`supabase/migrations/20260819000000_user_data_rls.sql`](supabase/migrations/20260819000000_user_data_rls.sql) og kan kjøres i **SQL Editor**. Den er idempotent.
+4. Deploy Edge Function for kalenderfeeder:
+   ```bash
+   supabase functions deploy ics-proxy
+   ```
+
+## Scripts
+
+| Kommando           | Beskrivelse                                   |
+| ------------------ | --------------------------------------------- |
+| `npm run dev`      | Utviklingsserver                              |
+| `npm run build`    | Produksjonsbygging                            |
+| `npm run preview`  | Forhåndsvis bygget                                              |
+| `npm run lint`     | Oxlint                                         |
+| `npm test`         | Kjører enhetstestene i `src/lib/*.test.mjs`    |
+| `npx playwright test e2e` | E2E-tester (smoke + sikkerhet)         |
+
+## Deploy
+
+Pushet til `main` deployer automatisk til Vercel (se `vercel.json` for sikkerhetsheadere).

@@ -7,10 +7,10 @@ const cacheKey = (userId) => (hasSupabase && userId !== 'local' ? `${unscopedKey
 
 function normalize(data) {
   if (!data) return data
-  if (!Array.isArray(data.exams)) data.exams = []
-  if (!Array.isArray(data.readings)) data.readings = []
-  data.readings = (data.readings ?? []).map((r) => ({ chapters: [], ...r }))
-  return data
+  const exams = Array.isArray(data.exams) ? data.exams : []
+  const readings = (Array.isArray(data.readings) ? data.readings : []).map((r) => ({ chapters: [], ...r }))
+  if (exams === data.exams && readings === data.readings) return data
+  return { ...data, exams, readings }
 }
 
 function localData(userId) {

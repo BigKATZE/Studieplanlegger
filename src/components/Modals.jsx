@@ -1,12 +1,31 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { uid, SUBJECT_COLORS } from '../lib/store'
 import { isoWeek, weekRange } from '../lib/date'
 import { Select } from './ui'
 
 export function Modal({ title, onClose, children }) {
+  const panelRef = useRef(null)
+  useEffect(() => {
+    const prev = document.activeElement
+    const first = panelRef.current?.querySelector('input, select, textarea, button, [tabindex]')
+    ;(first ?? panelRef.current)?.focus()
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      prev?.focus?.()
+    }
+  }, [onClose])
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/30 p-4 pt-12" onClick={onClose}>
       <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
         className="mx-auto w-full max-w-lg rounded-xl bg-surface p-6 shadow-xl ring-1 ring-line"
         onClick={(e) => e.stopPropagation()}
       >

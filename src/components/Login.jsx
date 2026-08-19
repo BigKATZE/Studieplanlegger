@@ -32,6 +32,22 @@ export default function Login({ onBack }) {
     }
   }
 
+  const forgotPassword = async () => {
+    if (!email.trim()) {
+      setError('Skriv inn e-postadressen din først.')
+      return
+    }
+    setBusy(true)
+    setError('')
+    setInfo('')
+    const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin,
+    })
+    setBusy(false)
+    if (err) setError(err.message)
+    else setInfo('Sjekk innboksen din – vi har sendt en lenke for å tilbakestille passordet.')
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-xl bg-surface p-6 shadow-xl ring-1 ring-line">
@@ -64,6 +80,16 @@ export default function Login({ onBack }) {
               className={inputCls}
             />
           </label>
+          {mode === 'login' && (
+            <button
+              type="button"
+              onClick={forgotPassword}
+              disabled={busy}
+              className="text-xs text-muted hover:text-ink"
+            >
+              Glemt passord?
+            </button>
+          )}
           {error && <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
           {info && <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">{info}</p>}
           <button type="submit" disabled={busy} className="btn-primary w-full justify-center">
