@@ -329,11 +329,11 @@ export default function App() {
           <button onClick={() => openModal('import')} className="btn-primary">Importer</button>
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
+          <button onClick={() => openModal('subject')} className="btn-ghost">Nytt fag</button>
           <button onClick={() => openModal('lecture')} className="btn-ghost">Ny forelesning</button>
           <button onClick={() => openModal('reading')} className="btn-ghost">Nytt pensum</button>
           <button onClick={() => openModal('assignment')} className="btn-ghost">Nytt arbeidskrav</button>
           <button onClick={() => openModal('exam')} className="btn-ghost">Ny eksamen</button>
-          <button onClick={() => openModal('subject')} className="btn-ghost">Nytt fag</button>
         </div>
       </header>
 
