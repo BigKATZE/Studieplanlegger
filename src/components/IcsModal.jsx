@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { Modal } from './Modals'
 import { parseIcs, guessKind, extractCode } from '../lib/ics'
 import { matchSubject } from '../lib/parseSmartInput'
 import { uid } from '../lib/store'
@@ -8,7 +7,7 @@ import { Select } from './ui'
 const inputCls =
   'w-full rounded-md border border-line bg-surface px-3 py-2 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20'
 
-export default function IcsModal({ subjects, onImport, onClose }) {
+export default function IcsImport({ subjects, onImport, onClose }) {
   const [feedUrl, setFeedUrl] = useState('')
   const [state, setState] = useState('config') // config | loading | review
   const [error, setError] = useState('')
@@ -64,9 +63,7 @@ export default function IcsModal({ subjects, onImport, onClose }) {
     onClose()
   }
 
-  return (
-    <Modal title="Importer iCal" onClose={onClose}>
-      {state !== 'review' ? (
+  return state !== 'review' ? (
         <div className="space-y-4">
           <p className="text-sm text-muted">
             Bruk Canvas-kalenderfeeden din i stedet for access token: Åpne Canvas → Konto → Kalender →
@@ -168,7 +165,5 @@ export default function IcsModal({ subjects, onImport, onClose }) {
             <button type="button" onClick={confirm} className="btn-primary">Importer valgte</button>
           </div>
         </div>
-      )}
-    </Modal>
-  )
+      )
 }

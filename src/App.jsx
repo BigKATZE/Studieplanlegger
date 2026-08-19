@@ -8,7 +8,6 @@ import Gjøremål from './components/Gjøremål'
 import Eksamener from './components/Eksamener'
 import SmartInput from './components/SmartInput'
 import ImportModal from './components/ImportModal'
-import IcsModal from './components/IcsModal'
 import { Modal, SubjectForm, LectureForm, AssignmentForm, ExamForm, ReadingForm } from './components/Modals'
 import { DeadlineStrip, SubjectFilter } from './components/ui'
 
@@ -291,8 +290,7 @@ export default function App() {
         </nav>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <button onClick={() => openModal('import')} className="btn-primary">Importer timeplan (PDF)</button>
-          <button onClick={() => openModal('ics')} className="btn-primary">Importer iCal</button>
+          <button onClick={() => openModal('import')} className="btn-primary">Importer</button>
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
           <button onClick={() => openModal('lecture')} className="btn-ghost">Ny forelesning</button>
@@ -404,10 +402,12 @@ export default function App() {
         </Modal>
       )}
       {modal === 'import' && (
-        <ImportModal subjects={data.subjects} onImport={actions.importLectures} onClose={closeModal} />
-      )}
-      {modal === 'ics' && (
-        <IcsModal subjects={data.subjects} onImport={actions.icsImport} onClose={closeModal} />
+        <ImportModal
+          subjects={data.subjects}
+          onImportPdf={actions.importLectures}
+          onImportIcs={actions.icsImport}
+          onClose={closeModal}
+        />
       )}
     </div>
   )
