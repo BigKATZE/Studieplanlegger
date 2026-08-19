@@ -2,17 +2,18 @@ import { useMemo } from 'react'
 import { SubjectChip } from './ui'
 import { fmtShort } from '../lib/date'
 
-export default function Pensum({ readings, subjects, onToggleReading, onRemoveReading }) {
+export default function Pensum({ readings, subjects, onToggleReading, onRemoveReading, onAdd }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
 
-  const sorted = useMemo(
-    () => [...readings].sort((a, b) => (a.date || '9999').localeCompare(b.date || '9999')),
-    [readings],
-  )
+  const key = (r) => (r.week ? String(r.week).padStart(2, '0') : (r.date ?? '9999'))
+  const sorted = useMemo(() => [...readings].sort((a, b) => key(a).localeCompare(key(b))), [readings])
 
   return (
     <section className="mt-6">
-      <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Pensum til forelesning</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Pensum til forelesning</h2>
+        <button onClick={onAdd} className="btn-primary">Legg til pensum</button>
+      </div>
       {sorted.length === 0 && (
         <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
           Ingen pensum registrert. Legg til pensum eller skriv f.eks. «pensum kapittel 3 i forretningsjus» i feltet øverst.
@@ -29,7 +30,9 @@ export default function Pensum({ readings, subjects, onToggleReading, onRemoveRe
               {r.done ? '✓' : ''}
             </button>
             <span className={`text-sm font-medium ${r.done ? 'text-muted line-through' : ''}`}>{r.title}</span>
-            {r.date && <span className="text-xs text-muted">til {fmtShort(new Date(r.date))}</span>}
+            {r.week
+              ? <span className="text-xs text-muted">Uke {r.week}</span>
+              : r.date && <span className="text-xs text-muted">til {fmtShort(new Date(r.date))}</span>}
             <SubjectChip subject={subjectById[r.subjectId]} />
             <button
               onClick={() => onRemoveReading(r.id)}

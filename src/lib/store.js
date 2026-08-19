@@ -4,7 +4,7 @@ export function uid() {
   return Math.random().toString(36).slice(2, 10)
 }
 
-const SUBJECT_COLORS = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626']
+export const SUBJECT_COLORS = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626']
 
 export function pickSubjectColor(i) {
   return SUBJECT_COLORS[i % SUBJECT_COLORS.length]
@@ -63,9 +63,9 @@ function seed() {
   ]
 
   const readings = [
-    { id: uid(), subjectId: jur, title: 'Kapittel 1–2 – Rettssystemet og rettskildene', date: '2026-08-17', done: false },
-    { id: uid(), subjectId: jur, title: 'Kapittel 3 – Avtaleloven', date: '2026-08-28', done: false },
-    { id: uid(), subjectId: subjects[2].id, title: 'Kapittel 5 – Årsregnskap', date: '2026-09-08', done: false },
+    { id: uid(), subjectId: jur, title: 'Kapittel 1–2 – Rettssystemet og rettskildene', week: 34, done: false },
+    { id: uid(), subjectId: jur, title: 'Kapittel 3 – Avtaleloven', week: 35, done: false },
+    { id: uid(), subjectId: subjects[2].id, title: 'Kapittel 5 – Årsregnskap', week: 37, done: false },
   ]
 
   return { subjects, lectures, assignments, exams, readings }

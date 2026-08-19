@@ -22,7 +22,7 @@ export default function IcsModal({ subjects, onImport, onClose }) {
     }
     setRows(
       events.map((e) => {
-        const kind = /eksamen|exam|prøve/.test(e.title) ? 'exam' : 'assignment'
+        const kind = /eksamen|exam|prøve|tentamen/.test(e.title.toLowerCase()) ? 'exam' : 'assignment'
         const subj = matchSubject(e.title.toLowerCase(), subjects)
         return { key: uid(), include: true, kind, title: e.title, date: e.date, subjectValue: subj?.id ?? 'new', newName: '' }
       }),
@@ -64,7 +64,7 @@ export default function IcsModal({ subjects, onImport, onClose }) {
   }
 
   return (
-    <Modal title="Importer fra Canvas (uten token)" onClose={onClose}>
+    <Modal title="Importer iCal" onClose={onClose}>
       {state !== 'review' ? (
         <div className="space-y-4">
           <p className="text-sm text-muted">
@@ -120,7 +120,7 @@ export default function IcsModal({ subjects, onImport, onClose }) {
                   <select
                     value={r.kind}
                     onChange={(e) => patch(i, { kind: e.target.value })}
-                    className={`${inputCls} w-32`}
+                    className="select w-32"
                     aria-label="Type"
                   >
                     <option value="assignment">Arbeidskrav</option>
@@ -143,7 +143,7 @@ export default function IcsModal({ subjects, onImport, onClose }) {
                   <select
                     value={r.subjectValue}
                     onChange={(e) => patch(i, { subjectValue: e.target.value })}
-                    className={`${inputCls} w-48`}
+                    className="select w-48"
                     aria-label="Fag"
                   >
                     {subjects.map((s) => (

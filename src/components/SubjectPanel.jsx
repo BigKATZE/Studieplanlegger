@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 
-export default function SubjectPanel({ subjects, lectures, assignments, onSetLevel }) {
+export default function SubjectPanel({ subjects, lectures, assignments, onSetLevel, onRemoveSubject }) {
   const stats = useMemo(
     () => new Map(subjects.map((s) => [s.id, computeStats(s, lectures, assignments)])),
     [subjects, lectures, assignments],
@@ -26,7 +26,18 @@ export default function SubjectPanel({ subjects, lectures, assignments, onSetLev
                 <span className="chip" style={{ backgroundColor: s.color + '1a', color: s.color }}>
                   {s.short || s.name}
                 </span>
-                <span className="font-mono text-xs text-muted">{s.code}</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs text-muted">{s.code}</span>
+                  <button
+                    onClick={() => {
+                      if (confirm(`Fjerne «${s.short || s.name}» og alt tilhørende?`)) onRemoveSubject(s.id)
+                    }}
+                    className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-danger"
+                    aria-label={`Fjern fag ${s.short}`}
+                  >
+                    Fjern
+                  </button>
+                </div>
               </div>
               <div className="mt-3 space-y-2.5">
                 <ProgressRow label="Pensum" done={st.doneCh} total={st.totalCh} />
@@ -39,7 +50,7 @@ export default function SubjectPanel({ subjects, lectures, assignments, onSetLev
                   <select
                     value={s.levelOverride ?? ''}
                     onChange={(e) => onSetLevel(s.id, e.target.value === '' ? null : Number(e.target.value))}
-                    className="rounded-md border border-line bg-surface px-2 py-1 text-xs"
+                    className="select px-2 py-1 text-xs"
                     aria-label={`Nivå for ${s.short}`}
                   >
                     <option value="">Auto</option>

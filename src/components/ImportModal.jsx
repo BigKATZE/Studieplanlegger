@@ -65,7 +65,7 @@ export default function ImportModal({ subjects, onImport, onClose }) {
           <>
             <div>
               <span className="mb-1 block text-xs font-medium text-muted">Import til fag</span>
-              <select className={inputCls} value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
+              <select className="select w-full" value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
                 {subjects.map((s) => (
                   <option key={s.id} value={s.id}>{s.short}</option>
                 ))}

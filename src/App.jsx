@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { load, save, uid, pickSubjectColor } from './lib/store'
-import { fmtShort, iso } from './lib/date'
+import { fmtShort, iso, isoWeek } from './lib/date'
 import SubjectPanel from './components/SubjectPanel'
 import Timeplan from './components/Timeplan'
 import Pensum from './components/Pensum'
@@ -8,7 +8,6 @@ import Gjøremål from './components/Gjøremål'
 import Eksamener from './components/Eksamener'
 import SmartInput from './components/SmartInput'
 import ImportModal from './components/ImportModal'
-import CanvasModal from './components/CanvasModal'
 import IcsModal from './components/IcsModal'
 import { Modal, SubjectForm, LectureForm, AssignmentForm, ExamForm, ReadingForm } from './components/Modals'
 import { DeadlineStrip, SubjectFilter } from './components/ui'
@@ -92,33 +91,6 @@ export default function App() {
       ...d,
       lectures: [...d.lectures, ...rows.map((l) => ({ id: uid(), chapters: [], done: false, ...l }))],
     })),
-    canvasImport: (groups) => update((d) => {
-      const subjects = [...d.subjects]
-      const added = []
-      for (const g of groups) {
-        let subjectId = g.subjectValue
-        if (subjectId === 'new') {
-          subjectId = uid()
-          subjects.push({
-            id: subjectId,
-            code: g.courseCode,
-            name: g.courseName,
-            short: g.courseName || g.courseCode,
-            color: pickSubjectColor(subjects.length),
-            levelOverride: null,
-          })
-        }
-        for (const r of g.rows) {
-          if (!r.include || !r.title.trim() || !r.deadline) continue
-          const assignment = { subjectId, title: r.title.trim(), deadline: r.deadline, status: 'not_started' }
-          const dup = d.assignments.some(
-            (x) => x.subjectId === subjectId && x.title === assignment.title && x.deadline === assignment.deadline,
-          )
-          if (!dup) added.push({ id: uid(), ...assignment })
-        }
-      }
-      return { ...d, subjects, assignments: [...d.assignments, ...added] }
-    }),
     icsImport: (rows) => update((d) => {
       const subjects = [...d.subjects]
       const assignments = [...d.assignments]
@@ -172,6 +144,14 @@ export default function App() {
       ...d,
       subjects: d.subjects.map((s) => (s.id === subjectId ? { ...s, levelOverride: level } : s)),
     })),
+    removeSubject: (id) => update((d) => ({
+      ...d,
+      subjects: d.subjects.filter((s) => s.id !== id),
+      lectures: d.lectures.filter((l) => l.subjectId !== id),
+      assignments: d.assignments.filter((a) => a.subjectId !== id),
+      exams: d.exams.filter((e) => e.subjectId !== id),
+      readings: d.readings.filter((r) => r.subjectId !== id),
+    })),
     removeLecture: (id) => update((d) => ({
       ...d,
       lectures: d.lectures.filter((l) => l.id !== id),
@@ -219,7 +199,7 @@ export default function App() {
       actions.addReading({
         subjectId: action.subject.id,
         title: action.label,
-        date: action.date ? iso(action.date) : '',
+        week: action.date ? isoWeek(action.date) : null,
         done: false,
       })
       return {
@@ -263,8 +243,9 @@ export default function App() {
 
         <div className="mt-5 flex flex-wrap gap-2">
           <button onClick={() => setModal('import')} className="btn-primary">Importer timeplan (PDF)</button>
-          <button onClick={() => setModal('ics')} className="btn-primary">Importer iCal (uten token)</button>
-          <button onClick={() => setModal('canvas')} className="btn-ghost">Importer fra Canvas (token)</button>
+          <button onClick={() => setModal('ics')} className="btn-primary">Importer iCal</button>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-2">
           <button onClick={() => setModal('lecture')} className="btn-ghost">Ny forelesning</button>
           <button onClick={() => setModal('reading')} className="btn-ghost">Nytt pensum</button>
           <button onClick={() => setModal('assignment')} className="btn-ghost">Nytt arbeidskrav</button>
@@ -281,6 +262,7 @@ export default function App() {
               lectures={data.lectures}
               assignments={data.assignments}
               onSetLevel={actions.setLevel}
+              onRemoveSubject={actions.removeSubject}
             />
             <DeadlineStrip
               assignments={data.assignments}
@@ -311,6 +293,7 @@ export default function App() {
               subjects={data.subjects}
               onToggleReading={actions.toggleReading}
               onRemoveReading={actions.removeReading}
+              onAdd={() => setModal('reading')}
             />
           </>
         )}
@@ -356,7 +339,7 @@ export default function App() {
       )}
       {modal === 'reading' && (
         <Modal title="Nytt pensum" onClose={() => setModal(null)}>
-          <ReadingForm subjects={data.subjects} onAdd={actions.addReading} onClose={() => setModal(null)} />
+          <ReadingForm subjects={data.subjects} lectures={data.lectures} onAdd={actions.addReading} onClose={() => setModal(null)} />
         </Modal>
       )}
       {modal === 'exam' && (
@@ -366,9 +349,6 @@ export default function App() {
       )}
       {modal === 'import' && (
         <ImportModal subjects={data.subjects} onImport={actions.importLectures} onClose={() => setModal(null)} />
-      )}
-      {modal === 'canvas' && (
-        <CanvasModal subjects={data.subjects} onImport={actions.canvasImport} onClose={() => setModal(null)} />
       )}
       {modal === 'ics' && (
         <IcsModal subjects={data.subjects} onImport={actions.icsImport} onClose={() => setModal(null)} />

@@ -41,7 +41,7 @@ export default function Gjøremål({ assignments, subjects, onSetAssignmentStatu
                   <select
                     value={a.status}
                     onChange={(e) => onSetAssignmentStatus(a.id, e.target.value)}
-                    className="rounded-md border border-line bg-surface px-2 py-1 text-xs"
+                    className="select px-2 py-1 text-xs"
                     aria-label={`Status for ${a.title}`}
                   >
                     {Object.entries(STATUS_LABEL).map(([v, label]) => (
