@@ -119,7 +119,7 @@ export default function App() {
         if (newSubjects.has(name)) return newSubjects.get(name)
         const id = uid()
         newSubjects.set(name, id)
-        subjects.push({ id, code: '', name, short: name, color: pickSubjectColor(subjects.length), levelOverride: null })
+        subjects.push({ id, code: name, name, short: name, color: pickSubjectColor(subjects.length), levelOverride: null })
         return id
       }
       for (const r of rows) {

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Modal } from './Modals'
-import { parseIcs, guessKind } from '../lib/ics'
+import { parseIcs, guessKind, extractCode } from '../lib/ics'
 import { matchSubject } from '../lib/parseSmartInput'
 import { uid } from '../lib/store'
 import { Select } from './ui'
@@ -25,7 +25,7 @@ export default function IcsModal({ subjects, onImport, onClose }) {
       events.map((e) => {
         const kind = guessKind(e.title)
         const subj = matchSubject(e.title.toLowerCase(), subjects)
-        return { key: uid(), include: true, kind, title: e.title, date: e.date, time: e.time, subjectValue: subj?.id ?? 'new', newName: '' }
+        return { key: uid(), include: true, kind, title: e.title, date: e.date, time: e.time, subjectValue: subj?.id ?? 'new', newName: subj ? '' : extractCode(e.title) }
       }),
     )
     setState('review')

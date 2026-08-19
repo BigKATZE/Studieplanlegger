@@ -1,5 +1,5 @@
 import assert from 'node:assert'
-import { parseIcs, guessKind } from './ics.js'
+import { parseIcs, guessKind, extractCode } from './ics.js'
 
 const isoLocal = (s) => {
   const d = new Date(s)
@@ -39,5 +39,11 @@ assert.equal(guessKind('Seminar i rettslære'), 'lecture')
 assert.equal(guessKind('Arbeidskrav 1 Forretningsjus'), 'assignment')
 assert.equal(guessKind('Innlevering kapittel 3'), 'assignment')
 assert.equal(guessKind('Hjemmeeksamen'), 'exam')
+
+assert.equal(extractCode('JUS2010 Forelesning Statsrett intro'), 'JUS2010')
+assert.equal(extractCode('Forelesning JUR3420'), 'JUR3420')
+assert.equal(extractCode('Seminar BØK 3430'), 'BØK3430')
+assert.equal(extractCode('Eksamen i bedøk'), '')
+assert.equal(extractCode('Forelesning Statsrett/EØS-rett tirs 10.15 u 35'), '')
 
 console.log('ics parseIcs: ok')

@@ -17,6 +17,11 @@ function icsDate(value, prop) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
+export function extractCode(title) {
+  const m = title.match(/\b[A-ZÆØÅ]{2,}\s*\d{3,}\b/)
+  return m ? m[0].replace(/\s+/g, '') : ''
+}
+
 export function guessKind(title) {
   const low = title.toLowerCase()
   if (/eksamen|exam|tentamen|prøve/.test(low)) return 'exam'
