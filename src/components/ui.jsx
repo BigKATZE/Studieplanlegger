@@ -78,6 +78,18 @@ export function DeadlineBadge({ deadline }) {
   )
 }
 
+export function WeekFilter({ weeks, active, onChange }) {
+  return (
+    <Select
+      value={active == null ? '' : String(active)}
+      onChange={(v) => onChange(v === '' ? null : Number(v))}
+      options={[{ value: '', label: 'Alle uker' }, ...weeks.map((w) => ({ value: String(w), label: `Uke ${w}` }))]}
+      className="w-36"
+      ariaLabel="Filtrer på uke"
+    />
+  )
+}
+
 export function SubjectFilter({ subjects, active, onChange }) {
   return (
     <div className="mt-6 flex flex-wrap items-center gap-2">

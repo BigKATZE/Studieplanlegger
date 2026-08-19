@@ -1,31 +1,42 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { isoWeek, weekRange, weekdayShort } from '../lib/date'
-import { SubjectChip } from './ui'
+import { SubjectChip, WeekFilter } from './ui'
 
 export default function Timeplan({ lectures, subjects, onToggleLecture, onToggleChapter, onRemoveLecture, onEditLecture }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
+  const [week, setWeek] = useState(null)
 
-  const weeks = useMemo(() => {
-    const groups = new Map()
+  const groups = useMemo(() => {
+    const m = new Map()
     lectures.forEach((l) => {
-      const date = new Date(l.date)
-      const w = isoWeek(date)
-      if (!groups.has(w)) groups.set(w, { week: w, date, lectures: [] })
-      groups.get(w).lectures.push(l)
+      const w = isoWeek(new Date(l.date))
+      if (!m.has(w)) m.set(w, { week: w, date: new Date(l.date), lectures: [] })
+      m.get(w).lectures.push(l)
     })
-    return [...groups.values()].sort((a, b) => a.date - b.date)
+    return [...m.values()].sort((a, b) => a.date - b.date)
   }, [lectures])
+
+  const weeks = useMemo(() => groups.map((g) => g.week), [groups])
+  const visible = week == null ? groups : groups.filter((g) => g.week === week)
 
   return (
     <section className="mt-6">
-      <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Uke for uke</h2>
-      {weeks.length === 0 && (
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Uke for uke</h2>
+        <WeekFilter weeks={weeks} active={week} onChange={setWeek} />
+      </div>
+      {lectures.length === 0 && (
         <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
           Ingen forelesninger ennå. Importer en timeplan-PDF eller legg til manuelt.
         </p>
       )}
+      {visible.length === 0 && lectures.length > 0 && (
+        <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
+          Ingen forelesninger i uke {week}.
+        </p>
+      )}
       <div className="mt-3 space-y-6">
-        {weeks.map((g) => (
+        {visible.map((g) => (
           <div key={g.week}>
             <div className="flex items-baseline gap-3">
               <h3 className="font-display text-lg font-semibold">Uke {g.week}</h3>
