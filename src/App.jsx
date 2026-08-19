@@ -345,13 +345,13 @@ export default function App() {
             className="rounded p-1 text-ink hover:text-primary"
           >
             {theme === 'dark' ? (
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 20 20">
-                <circle cx="10" cy="10" r="3.5" stroke="currentColor" strokeWidth="1.5" />
-                <path stroke="currentColor" strokeLinecap="round" strokeWidth="1.5" d="M10 2v2M10 16v2M2 10h2M16 10h2M4.3 4.3l1.4 1.4M14.3 14.3l1.4 1.4M15.7 4.3l-1.4 1.4M5.7 14.3l-1.4 1.4" />
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                <circle cx="12" cy="12" r="4" />
+                <path strokeLinecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
               </svg>
             ) : (
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 20 20">
-                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17.3 13.3A7.5 7.5 0 1 1 6.7 2.7a6 6 0 1 0 10.6 10.6z" />
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75 9.75 9.75 0 0 1 8.25 6c0-1.33.266-2.597.748-3.752A9.75 9.75 0 0 0 3 11.25 9.75 9.75 0 0 0 12.75 21a9.75 9.75 0 0 0 9.002-5.998Z" />
               </svg>
             )}
           </button>
