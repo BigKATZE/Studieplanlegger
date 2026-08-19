@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { uid, pickSubjectColor } from './lib/store'
 import { fmtShort, iso, isoWeek } from './lib/date'
 import { useAuth, useStore } from './lib/sync'
@@ -53,6 +53,13 @@ export default function App() {
   const [editing, setEditing] = useState(null)
   const [filterSubjectId, setFilterSubjectId] = useState(null)
   const [showLogin, setShowLogin] = useState(false)
+  const [undo, setUndo] = useState(null)
+
+  useEffect(() => {
+    if (!undo) return
+    const t = setTimeout(() => setUndo(null), 6000)
+    return () => clearTimeout(t)
+  }, [undo])
 
   if (authStatus === 'loading') {
     return (
@@ -82,6 +89,17 @@ export default function App() {
   }
 
   const bySubject = (items) => (filterSubjectId ? items.filter((i) => i.subjectId === filterSubjectId) : items)
+
+  const removeWithUndo = (label, apply) => {
+    setUndo({ label, snapshot: data })
+    update(apply)
+  }
+
+  const onUndo = () => {
+    if (!undo) return
+    update(() => undo.snapshot)
+    setUndo(null)
+  }
 
   const actions = {
     addSubject: (s) => update((d) => ({
@@ -170,12 +188,16 @@ export default function App() {
           : l,
       ),
     })),
-    removeChapter: (lectureId, chapterId) => update((d) => ({
-      ...d,
-      lectures: d.lectures.map((l) =>
-        l.id === lectureId ? { ...l, chapters: l.chapters.filter((c) => c.id !== chapterId) } : l,
-      ),
-    })),
+    removeChapter: (lectureId, chapterId) => {
+      const l = data.lectures.find((x) => x.id === lectureId)
+      const c = l?.chapters.find((x) => x.id === chapterId)
+      removeWithUndo(`Fjernet «${c?.text ?? 'kapittel'}»`, (d) => ({
+        ...d,
+        lectures: d.lectures.map((x) =>
+          x.id === lectureId ? { ...x, chapters: x.chapters.filter((c2) => c2.id !== chapterId) } : x,
+        ),
+      }))
+    },
     toggleLecture: (lectureId) => update((d) => ({
       ...d,
       lectures: d.lectures.map((l) => (l.id === lectureId ? { ...l, done: !l.done } : l)),
@@ -196,18 +218,27 @@ export default function App() {
       exams: d.exams.filter((e) => e.subjectId !== id),
       readings: d.readings.filter((r) => r.subjectId !== id),
     })),
-    removeLecture: (id) => update((d) => ({
-      ...d,
-      lectures: d.lectures.filter((l) => l.id !== id),
-    })),
-    removeAssignment: (id) => update((d) => ({
-      ...d,
-      assignments: d.assignments.filter((a) => a.id !== id),
-    })),
-    removeExam: (id) => update((d) => ({
-      ...d,
-      exams: d.exams.filter((e) => e.id !== id),
-    })),
+    removeLecture: (id) => {
+      const l = data.lectures.find((x) => x.id === id)
+      removeWithUndo(`Fjernet forelesning${l ? ` ${fmtShort(new Date(l.date))}` : ''}`, (d) => ({
+        ...d,
+        lectures: d.lectures.filter((x) => x.id !== id),
+      }))
+    },
+    removeAssignment: (id) => {
+      const a = data.assignments.find((x) => x.id === id)
+      removeWithUndo(`Fjernet «${a?.title ?? 'arbeidskrav'}»`, (d) => ({
+        ...d,
+        assignments: d.assignments.filter((x) => x.id !== id),
+      }))
+    },
+    removeExam: (id) => {
+      const e = data.exams.find((x) => x.id === id)
+      removeWithUndo(`Fjernet «${e?.title ?? 'eksamen'}»`, (d) => ({
+        ...d,
+        exams: d.exams.filter((x) => x.id !== id),
+      }))
+    },
     toggleReading: (id) => update((d) => ({
       ...d,
       readings: d.readings.map((r) => (r.id === id ? { ...r, done: !r.done } : r)),
@@ -220,10 +251,13 @@ export default function App() {
           : r,
       ),
     })),
-    removeReading: (id) => update((d) => ({
-      ...d,
-      readings: d.readings.filter((r) => r.id !== id),
-    })),
+    removeReading: (id) => {
+      const r = data.readings.find((x) => x.id === id)
+      removeWithUndo(`Fjernet «${r?.title ?? 'pensum'}»`, (d) => ({
+        ...d,
+        readings: d.readings.filter((x) => x.id !== id),
+      }))
+    },
     updateSubject: (s) => update((d) => ({
       ...d,
       subjects: d.subjects.map((x) => (x.id === s.id ? { ...x, ...s } : x)),
@@ -464,6 +498,15 @@ export default function App() {
         <Modal title="Endre passord" onClose={closeModal}>
           <PasswordForm onClose={closeModal} />
         </Modal>
+      )}
+
+      {undo && (
+        <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm shadow-lg">
+          <span className="text-ink">{undo.label}</span>
+          <button onClick={onUndo} className="font-medium text-primary hover:underline">
+            Angre
+          </button>
+        </div>
       )}
     </div>
   )
