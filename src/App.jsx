@@ -11,6 +11,7 @@ import Gjøremål from './components/Gjøremål'
 import Eksamener from './components/Eksamener'
 import SmartInput from './components/SmartInput'
 import ImportModal from './components/ImportModal'
+import PasswordForm from './components/PasswordForm'
 import { Modal, SubjectForm, LectureForm, AssignmentForm, ExamForm, ReadingForm } from './components/Modals'
 import { DeadlineStrip, SubjectFilter } from './components/ui'
 
@@ -279,12 +280,20 @@ export default function App() {
     <div className="min-h-screen">
       <header className="relative mx-auto max-w-5xl px-4 pb-6 pt-12">
         {hasSupabase && (
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className="absolute right-4 top-4 rounded p-1 text-sm text-muted hover:text-ink"
-          >
-            Logg ut
-          </button>
+          <div className="absolute right-4 top-4 flex gap-2">
+            <button
+              onClick={() => openModal('password')}
+              className="rounded p-1 text-sm text-muted hover:text-ink"
+            >
+              Endre passord
+            </button>
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="rounded p-1 text-sm text-muted hover:text-ink"
+            >
+              Logg ut
+            </button>
+          </div>
         )}
         <h1 className="font-display text-4xl font-bold tracking-tight">Studieplanlegger</h1>
         <p className="mt-1 text-sm text-muted">Timeplan, pensum, arbeidskrav og eksamener – uke for uke.</p>
@@ -424,6 +433,11 @@ export default function App() {
           onImportIcs={actions.icsImport}
           onClose={closeModal}
         />
+      )}
+      {modal === 'password' && (
+        <Modal title="Endre passord" onClose={closeModal}>
+          <PasswordForm onClose={closeModal} />
+        </Modal>
       )}
     </div>
   )
