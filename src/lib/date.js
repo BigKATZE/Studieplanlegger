@@ -3,8 +3,13 @@ export const DEFAULT_WEEKS = [
   ...Array.from({ length: 24 }, (_, i) => i + 1),
 ]
 
+export function schoolYearStart() {
+  const now = new Date()
+  return now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1
+}
+
 export function weekRangeByWeek(week) {
-  const year = week >= 34 ? 2026 : 2027
+  const year = week >= 34 ? schoolYearStart() : schoolYearStart() + 1
   const jan4 = new Date(Date.UTC(year, 0, 4))
   const day = jan4.getUTCDay() || 7
   const w1 = new Date(Date.UTC(year, 0, 4 - (day - 1)))
