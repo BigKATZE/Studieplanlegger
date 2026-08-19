@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { isoWeek, weekRange, weekdayShort } from '../lib/date'
 import { SubjectChip } from './ui'
 
-export default function Timeplan({ lectures, subjects, onToggleLecture, onToggleChapter, onRemoveLecture }) {
+export default function Timeplan({ lectures, subjects, onToggleLecture, onToggleChapter, onRemoveLecture, onEditLecture }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
 
   const weeks = useMemo(() => {
@@ -53,13 +53,22 @@ export default function Timeplan({ lectures, subjects, onToggleLecture, onToggle
                       {subject && <SubjectChip subject={subject} />}
                       {l.room && <span className="font-mono text-xs text-muted">{l.room}</span>}
                       {l.lecturer && <span className="text-xs text-muted">{l.lecturer}</span>}
-                      <button
-                        onClick={() => onRemoveLecture(l.id)}
-                        className="ml-auto rounded p-1 text-xs text-muted hover:bg-paper hover:text-danger"
-                        aria-label="Fjern forelesning"
-                      >
-                        Fjern
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => onEditLecture(l)}
+                          className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-ink"
+                          aria-label="Rediger forelesning"
+                        >
+                          Rediger
+                        </button>
+                        <button
+                          onClick={() => onRemoveLecture(l.id)}
+                          className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-danger"
+                          aria-label="Fjern forelesning"
+                        >
+                          Fjern
+                        </button>
+                      </div>
                     </div>
                     {l.topic && <p className="mt-1 pl-6 text-sm text-muted">{l.topic}</p>}
                     {l.chapters.length > 0 && (

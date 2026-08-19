@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { SubjectChip, DeadlineBadge } from './ui'
 import { fmtShort } from '../lib/date'
 
-export default function Eksamener({ exams, subjects, onRemoveExam }) {
+export default function Eksamener({ exams, subjects, onRemoveExam, onEditExam }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
 
   const sorted = useMemo(() => [...exams].sort((a, b) => a.date.localeCompare(b.date)), [exams])
@@ -28,13 +28,22 @@ export default function Eksamener({ exams, subjects, onRemoveExam }) {
               {e.time && <span className="text-xs text-muted">kl. {e.time}</span>}
               <SubjectChip subject={subjectById[e.subjectId]} />
               {past && <span className="text-xs text-muted">(gjennomført)</span>}
-              <button
-                onClick={() => onRemoveExam(e.id)}
-                className="ml-auto rounded p-1 text-xs text-muted hover:bg-paper hover:text-danger"
-                aria-label="Fjern eksamen"
-              >
-                Fjern
-              </button>
+              <div className="ml-auto flex items-center gap-2">
+                <button
+                  onClick={() => onEditExam(e)}
+                  className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-ink"
+                  aria-label="Rediger eksamen"
+                >
+                  Rediger
+                </button>
+                <button
+                  onClick={() => onRemoveExam(e.id)}
+                  className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-danger"
+                  aria-label="Fjern eksamen"
+                >
+                  Fjern
+                </button>
+              </div>
             </div>
           )
         })}

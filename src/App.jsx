@@ -56,7 +56,21 @@ export default function App() {
   const [data, update] = useStore()
   const [tab, setTab] = useState('timeplan')
   const [modal, setModal] = useState(null)
+  const [editing, setEditing] = useState(null)
   const [filterSubjectId, setFilterSubjectId] = useState(null)
+
+  const closeModal = () => {
+    setModal(null)
+    setEditing(null)
+  }
+  const openModal = (m) => {
+    setModal(m)
+    setEditing(null)
+  }
+  const openEdit = (type, item) => {
+    setEditing(item)
+    setModal(type)
+  }
 
   const bySubject = (items) => (filterSubjectId ? items.filter((i) => i.subjectId === filterSubjectId) : items)
 
@@ -96,21 +110,19 @@ export default function App() {
       const assignments = [...d.assignments]
       const exams = [...d.exams]
       const lectures = [...d.lectures]
+      const newSubjects = new Map()
+      const resolveSubject = (r) => {
+        if (r.subjectValue !== 'new') return r.subjectValue
+        const name = (r.newName || '').trim() || 'Ukjent fag'
+        if (newSubjects.has(name)) return newSubjects.get(name)
+        const id = uid()
+        newSubjects.set(name, id)
+        subjects.push({ id, code: '', name, short: name, color: pickSubjectColor(subjects.length), levelOverride: null })
+        return id
+      }
       for (const r of rows) {
         if (!r.include || !r.title.trim() || !r.date) continue
-        let subjectId = r.subjectValue
-        if (subjectId === 'new') {
-          subjectId = uid()
-          const name = r.newName.trim() || r.title.trim()
-          subjects.push({
-            id: subjectId,
-            code: '',
-            name,
-            short: name,
-            color: pickSubjectColor(subjects.length),
-            levelOverride: null,
-          })
-        }
+        const subjectId = resolveSubject(r)
         if (r.kind === 'exam') {
           const exam = { id: uid(), subjectId, title: r.title.trim(), date: r.date, time: '' }
           if (!exams.some((x) => x.subjectId === subjectId && x.title === exam.title && x.date === exam.date)) {
@@ -175,9 +187,37 @@ export default function App() {
       ...d,
       readings: d.readings.map((r) => (r.id === id ? { ...r, done: !r.done } : r)),
     })),
+    toggleReadingChapter: (readingId, chapterId) => update((d) => ({
+      ...d,
+      readings: d.readings.map((r) =>
+        r.id === readingId
+          ? { ...r, chapters: (r.chapters ?? []).map((c) => (c.id === chapterId ? { ...c, done: !c.done } : c)) }
+          : r,
+      ),
+    })),
     removeReading: (id) => update((d) => ({
       ...d,
       readings: d.readings.filter((r) => r.id !== id),
+    })),
+    updateSubject: (s) => update((d) => ({
+      ...d,
+      subjects: d.subjects.map((x) => (x.id === s.id ? { ...x, ...s } : x)),
+    })),
+    updateLecture: (l) => update((d) => ({
+      ...d,
+      lectures: d.lectures.map((x) => (x.id === l.id ? { ...x, ...l } : x)),
+    })),
+    updateAssignment: (a) => update((d) => ({
+      ...d,
+      assignments: d.assignments.map((x) => (x.id === a.id ? { ...x, ...a } : x)),
+    })),
+    updateExam: (e) => update((d) => ({
+      ...d,
+      exams: d.exams.map((x) => (x.id === e.id ? { ...x, ...e } : x)),
+    })),
+    updateReading: (r) => update((d) => ({
+      ...d,
+      readings: d.readings.map((x) => (x.id === r.id ? { ...x, ...r } : x)),
     })),
   }
 
@@ -249,15 +289,15 @@ export default function App() {
         </nav>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <button onClick={() => setModal('import')} className="btn-primary">Importer timeplan (PDF)</button>
-          <button onClick={() => setModal('ics')} className="btn-primary">Importer iCal</button>
+          <button onClick={() => openModal('import')} className="btn-primary">Importer timeplan (PDF)</button>
+          <button onClick={() => openModal('ics')} className="btn-primary">Importer iCal</button>
         </div>
         <div className="mt-2 flex flex-wrap gap-2">
-          <button onClick={() => setModal('lecture')} className="btn-ghost">Ny forelesning</button>
-          <button onClick={() => setModal('reading')} className="btn-ghost">Nytt pensum</button>
-          <button onClick={() => setModal('assignment')} className="btn-ghost">Nytt arbeidskrav</button>
-          <button onClick={() => setModal('exam')} className="btn-ghost">Ny eksamen</button>
-          <button onClick={() => setModal('subject')} className="btn-ghost">Nytt fag</button>
+          <button onClick={() => openModal('lecture')} className="btn-ghost">Ny forelesning</button>
+          <button onClick={() => openModal('reading')} className="btn-ghost">Nytt pensum</button>
+          <button onClick={() => openModal('assignment')} className="btn-ghost">Nytt arbeidskrav</button>
+          <button onClick={() => openModal('exam')} className="btn-ghost">Ny eksamen</button>
+          <button onClick={() => openModal('subject')} className="btn-ghost">Nytt fag</button>
         </div>
       </header>
 
@@ -270,6 +310,7 @@ export default function App() {
               assignments={data.assignments}
               onSetLevel={actions.setLevel}
               onRemoveSubject={actions.removeSubject}
+              onEditSubject={(s) => openEdit('subject', s)}
             />
             <DeadlineStrip
               assignments={data.assignments}
@@ -288,6 +329,7 @@ export default function App() {
               onToggleLecture={actions.toggleLecture}
               onToggleChapter={actions.toggleChapter}
               onRemoveLecture={actions.removeLecture}
+              onEditLecture={(l) => openEdit('lecture', l)}
             />
           </>
         )}
@@ -298,9 +340,12 @@ export default function App() {
             <Pensum
               readings={bySubject(data.readings)}
               subjects={data.subjects}
+              lectures={data.lectures}
               onToggleReading={actions.toggleReading}
+              onToggleReadingChapter={actions.toggleReadingChapter}
               onRemoveReading={actions.removeReading}
-              onAdd={() => setModal('reading')}
+              onEditReading={(r) => openEdit('reading', r)}
+              onAdd={() => openModal('reading')}
             />
           </>
         )}
@@ -313,6 +358,7 @@ export default function App() {
               subjects={data.subjects}
               onSetAssignmentStatus={actions.setAssignmentStatus}
               onRemoveAssignment={actions.removeAssignment}
+              onEditAssignment={(a) => openEdit('assignment', a)}
             />
           </>
         )}
@@ -324,41 +370,42 @@ export default function App() {
               exams={bySubject(data.exams)}
               subjects={data.subjects}
               onRemoveExam={actions.removeExam}
+              onEditExam={(e) => openEdit('exam', e)}
             />
           </>
         )}
       </main>
 
       {modal === 'subject' && (
-        <Modal title="Nytt fag" onClose={() => setModal(null)}>
-          <SubjectForm onAdd={actions.addSubject} onClose={() => setModal(null)} />
+        <Modal title={editing ? 'Rediger fag' : 'Nytt fag'} onClose={closeModal}>
+          <SubjectForm initial={editing} onAdd={editing ? actions.updateSubject : actions.addSubject} onClose={closeModal} />
         </Modal>
       )}
       {modal === 'lecture' && (
-        <Modal title="Ny forelesning" onClose={() => setModal(null)}>
-          <LectureForm subjects={data.subjects} onAdd={actions.addLecture} onClose={() => setModal(null)} />
+        <Modal title={editing ? 'Rediger forelesning' : 'Ny forelesning'} onClose={closeModal}>
+          <LectureForm subjects={data.subjects} initial={editing} onAdd={editing ? actions.updateLecture : actions.addLecture} onClose={closeModal} />
         </Modal>
       )}
       {modal === 'assignment' && (
-        <Modal title="Nytt arbeidskrav" onClose={() => setModal(null)}>
-          <AssignmentForm subjects={data.subjects} onAdd={actions.addAssignment} onClose={() => setModal(null)} />
+        <Modal title={editing ? 'Rediger arbeidskrav' : 'Nytt arbeidskrav'} onClose={closeModal}>
+          <AssignmentForm subjects={data.subjects} initial={editing} onAdd={editing ? actions.updateAssignment : actions.addAssignment} onClose={closeModal} />
         </Modal>
       )}
       {modal === 'reading' && (
-        <Modal title="Nytt pensum" onClose={() => setModal(null)}>
-          <ReadingForm subjects={data.subjects} lectures={data.lectures} onAdd={actions.addReading} onClose={() => setModal(null)} />
+        <Modal title={editing ? 'Rediger pensum' : 'Nytt pensum'} onClose={closeModal}>
+          <ReadingForm subjects={data.subjects} lectures={data.lectures} initial={editing} onAdd={editing ? actions.updateReading : actions.addReading} onClose={closeModal} />
         </Modal>
       )}
       {modal === 'exam' && (
-        <Modal title="Ny eksamen" onClose={() => setModal(null)}>
-          <ExamForm subjects={data.subjects} onAdd={actions.addExam} onClose={() => setModal(null)} />
+        <Modal title={editing ? 'Rediger eksamen' : 'Ny eksamen'} onClose={closeModal}>
+          <ExamForm subjects={data.subjects} initial={editing} onAdd={editing ? actions.updateExam : actions.addExam} onClose={closeModal} />
         </Modal>
       )}
       {modal === 'import' && (
-        <ImportModal subjects={data.subjects} onImport={actions.importLectures} onClose={() => setModal(null)} />
+        <ImportModal subjects={data.subjects} onImport={actions.importLectures} onClose={closeModal} />
       )}
       {modal === 'ics' && (
-        <IcsModal subjects={data.subjects} onImport={actions.icsImport} onClose={() => setModal(null)} />
+        <IcsModal subjects={data.subjects} onImport={actions.icsImport} onClose={closeModal} />
       )}
     </div>
   )

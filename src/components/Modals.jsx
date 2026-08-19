@@ -38,15 +38,15 @@ function Field({ label, children }) {
   )
 }
 
-export function SubjectForm({ onAdd, onClose }) {
-  const [name, setName] = useState('')
-  const [code, setCode] = useState('')
-  const [short, setShort] = useState('')
-  const [color, setColor] = useState(SUBJECT_COLORS[0])
+export function SubjectForm({ onAdd, onClose, initial }) {
+  const [name, setName] = useState(initial?.name ?? '')
+  const [code, setCode] = useState(initial?.code ?? '')
+  const [short, setShort] = useState(initial?.short ?? '')
+  const [color, setColor] = useState(initial?.color ?? SUBJECT_COLORS[0])
   const submit = (e) => {
     e.preventDefault()
     if (!name.trim()) return
-    onAdd({ name: name.trim(), code: code.trim(), short: short.trim() || name.trim(), color })
+    onAdd({ ...(initial?.id ? { id: initial.id } : {}), name: name.trim(), code: code.trim(), short: short.trim() || name.trim(), color })
     onClose()
   }
   return (
@@ -76,25 +76,31 @@ export function SubjectForm({ onAdd, onClose }) {
       </Field>
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onClose} className="btn-ghost">Avbryt</button>
-        <button type="submit" className="btn-primary">Legg til fag</button>
+        <button type="submit" className="btn-primary">{initial ? 'Lagre endringer' : 'Legg til fag'}</button>
       </div>
     </form>
   )
 }
 
-export function LectureForm({ subjects, onAdd, onClose }) {
-  const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? '')
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10))
-  const [start, setStart] = useState('10:00')
-  const [end, setEnd] = useState('11:45')
-  const [room, setRoom] = useState('')
-  const [lecturer, setLecturer] = useState('')
-  const [topic, setTopic] = useState('')
+export function LectureForm({ subjects, onAdd, onClose, initial }) {
+  const [subjectId, setSubjectId] = useState(initial?.subjectId ?? subjects[0]?.id ?? '')
+  const [date, setDate] = useState(initial?.date ?? new Date().toISOString().slice(0, 10))
+  const [start, setStart] = useState(initial?.start ?? '10:00')
+  const [end, setEnd] = useState(initial?.end ?? '11:45')
+  const [room, setRoom] = useState(initial?.room ?? '')
+  const [lecturer, setLecturer] = useState(initial?.lecturer ?? '')
+  const [topic, setTopic] = useState(initial?.topic ?? '')
   const [chapters, setChapters] = useState('')
   const submit = (e) => {
     e.preventDefault()
     if (!subjectId || !date) return
+    const newCh = chapters
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean)
+      .map((text) => ({ id: uid(), text, done: false }))
     onAdd({
+      ...(initial?.id ? { id: initial.id } : {}),
       subjectId,
       date,
       start,
@@ -102,11 +108,7 @@ export function LectureForm({ subjects, onAdd, onClose }) {
       room: room.trim(),
       lecturer: lecturer.trim(),
       topic: topic.trim(),
-      chapters: chapters
-        .split(',')
-        .map((c) => c.trim())
-        .filter(Boolean)
-        .map((text) => ({ id: uid(), text, done: false })),
+      chapters: initial ? [...(initial.chapters ?? []), ...newCh] : newCh,
     })
     onClose()
   }
@@ -142,21 +144,34 @@ export function LectureForm({ subjects, onAdd, onClose }) {
       </Field>
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onClose} className="btn-ghost">Avbryt</button>
-        <button type="submit" className="btn-primary">Legg til forelesning</button>
+        <button type="submit" className="btn-primary">{initial ? 'Lagre endringer' : 'Legg til forelesning'}</button>
       </div>
     </form>
   )
 }
 
-export function ReadingForm({ subjects, lectures, onAdd, onClose }) {
-  const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? '')
-  const [title, setTitle] = useState('')
-  const [week, setWeek] = useState('')
+export function ReadingForm({ subjects, lectures, onAdd, onClose, initial }) {
+  const [subjectId, setSubjectId] = useState(initial?.subjectId ?? subjects[0]?.id ?? '')
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [chapters, setChapters] = useState('')
+  const [week, setWeek] = useState(initial?.week != null ? String(initial.week) : '')
   const weekOptions = useMemo(() => buildWeekOptions(lectures), [lectures])
   const submit = (e) => {
     e.preventDefault()
     if (!subjectId || !title.trim()) return
-    onAdd({ subjectId, title: title.trim(), week: week ? Number(week) : null, done: false })
+    const newCh = chapters
+      .split(',')
+      .map((c) => c.trim())
+      .filter(Boolean)
+      .map((text) => ({ id: uid(), text, done: false }))
+    onAdd({
+      ...(initial?.id ? { id: initial.id } : {}),
+      subjectId,
+      title: title.trim(),
+      week: week ? Number(week) : null,
+      done: initial?.done ?? false,
+      chapters: initial ? [...(initial.chapters ?? []), ...newCh] : newCh,
+    })
     onClose()
   }
   return (
@@ -166,6 +181,9 @@ export function ReadingForm({ subjects, lectures, onAdd, onClose }) {
       </Field>
       <Field label="Pensum">
         <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder="Kapittel 3 og 4 – Avtaleloven" />
+      </Field>
+      <Field label="Kapittel (komma-separert, valgfritt)">
+        <input className={inputCls} value={chapters} onChange={(e) => setChapters(e.target.value)} placeholder="Kapittel 3, Kapittel 4" />
       </Field>
       <Field label="Uke (valgfritt)">
         <Select
@@ -178,7 +196,7 @@ export function ReadingForm({ subjects, lectures, onAdd, onClose }) {
       </Field>
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onClose} className="btn-ghost">Avbryt</button>
-        <button type="submit" className="btn-primary">Legg til pensum</button>
+        <button type="submit" className="btn-primary">{initial ? 'Lagre endringer' : 'Legg til pensum'}</button>
       </div>
     </form>
   )
@@ -215,14 +233,14 @@ function buildWeekOptions(lectures) {
   return out
 }
 
-export function AssignmentForm({ subjects, onAdd, onClose }) {
-  const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? '')
-  const [title, setTitle] = useState('')
-  const [deadline, setDeadline] = useState('')
+export function AssignmentForm({ subjects, onAdd, onClose, initial }) {
+  const [subjectId, setSubjectId] = useState(initial?.subjectId ?? subjects[0]?.id ?? '')
+  const [title, setTitle] = useState(initial?.title ?? '')
+  const [deadline, setDeadline] = useState(initial?.deadline ?? '')
   const submit = (e) => {
     e.preventDefault()
     if (!subjectId || !title.trim() || !deadline) return
-    onAdd({ subjectId, title: title.trim(), deadline, status: 'not_started' })
+    onAdd({ ...(initial?.id ? { id: initial.id } : {}), subjectId, title: title.trim(), deadline, status: initial?.status ?? 'not_started' })
     onClose()
   }
   return (
@@ -238,21 +256,21 @@ export function AssignmentForm({ subjects, onAdd, onClose }) {
       </Field>
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onClose} className="btn-ghost">Avbryt</button>
-        <button type="submit" className="btn-primary">Legg til arbeidskrav</button>
+        <button type="submit" className="btn-primary">{initial ? 'Lagre endringer' : 'Legg til arbeidskrav'}</button>
       </div>
     </form>
   )
 }
 
-export function ExamForm({ subjects, onAdd, onClose }) {
-  const [subjectId, setSubjectId] = useState(subjects[0]?.id ?? '')
-  const [title, setTitle] = useState('Skriftlig skoleeksamen')
-  const [date, setDate] = useState('')
-  const [time, setTime] = useState('09:00')
+export function ExamForm({ subjects, onAdd, onClose, initial }) {
+  const [subjectId, setSubjectId] = useState(initial?.subjectId ?? subjects[0]?.id ?? '')
+  const [title, setTitle] = useState(initial?.title ?? 'Skriftlig skoleeksamen')
+  const [date, setDate] = useState(initial?.date ?? '')
+  const [time, setTime] = useState(initial?.time ?? '09:00')
   const submit = (e) => {
     e.preventDefault()
     if (!subjectId || !title.trim() || !date) return
-    onAdd({ subjectId, title: title.trim(), date, time })
+    onAdd({ ...(initial?.id ? { id: initial.id } : {}), subjectId, title: title.trim(), date, time })
     onClose()
   }
   return (

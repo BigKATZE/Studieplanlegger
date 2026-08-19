@@ -4,7 +4,10 @@ export function uid() {
   return Math.random().toString(36).slice(2, 10)
 }
 
-export const SUBJECT_COLORS = ['#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626']
+export const SUBJECT_COLORS = [
+  '#7c3aed', '#2563eb', '#059669', '#d97706', '#dc2626', '#0d9488',
+  '#db2777', '#4f46e5', '#ea580c', '#0891b2', '#65a30d', '#c026d3',
+]
 
 export function pickSubjectColor(i) {
   return SUBJECT_COLORS[i % SUBJECT_COLORS.length]
@@ -63,9 +66,21 @@ function seed() {
   ]
 
   const readings = [
-    { id: uid(), subjectId: jur, title: 'Kapittel 1–2 – Rettssystemet og rettskildene', week: 34, done: false },
-    { id: uid(), subjectId: jur, title: 'Kapittel 3 – Avtaleloven', week: 35, done: false },
-    { id: uid(), subjectId: subjects[2].id, title: 'Kapittel 5 – Årsregnskap', week: 37, done: false },
+    {
+      id: uid(), subjectId: jur, title: 'Kapittel 1–2 – Rettssystemet og rettskildene', week: 34, done: false,
+      chapters: [
+        { id: uid(), text: 'Kapittel 1 – Rettssystemet', done: false },
+        { id: uid(), text: 'Kapittel 2 – Rettskildene', done: false },
+      ],
+    },
+    {
+      id: uid(), subjectId: jur, title: 'Kapittel 3 – Avtaleloven', week: 35, done: false,
+      chapters: [{ id: uid(), text: 'Kapittel 3 – Avtaleloven', done: false }],
+    },
+    {
+      id: uid(), subjectId: subjects[2].id, title: 'Kapittel 5 – Årsregnskap', week: 37, done: false,
+      chapters: [{ id: uid(), text: 'Kapittel 5 – Årsregnskap', done: false }],
+    },
   ]
 
   return { subjects, lectures, assignments, exams, readings }
@@ -78,6 +93,7 @@ export function load() {
       const data = JSON.parse(raw)
       if (!Array.isArray(data.exams)) data.exams = []
       if (!Array.isArray(data.readings)) data.readings = []
+      data.readings = data.readings.map((r) => ({ chapters: [], ...r }))
       return data
     }
   } catch {

@@ -8,7 +8,7 @@ const SECTIONS = [
   ['done', 'Ferdig'],
 ]
 
-export default function Gjøremål({ assignments, subjects, onSetAssignmentStatus, onRemoveAssignment }) {
+export default function Gjøremål({ assignments, subjects, onSetAssignmentStatus, onRemoveAssignment, onEditAssignment }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
 
   const grouped = useMemo(() => {
@@ -45,13 +45,22 @@ export default function Gjøremål({ assignments, subjects, onSetAssignmentStatu
                     className="w-auto"
                     ariaLabel={`Status for ${a.title}`}
                   />
-                  <button
-                    onClick={() => onRemoveAssignment(a.id)}
-                    className="ml-auto rounded p-1 text-xs text-muted hover:bg-paper hover:text-danger"
-                    aria-label="Fjern arbeidskrav"
-                  >
-                    Fjern
-                  </button>
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      onClick={() => onEditAssignment(a)}
+                      className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-ink"
+                      aria-label="Rediger arbeidskrav"
+                    >
+                      Rediger
+                    </button>
+                    <button
+                      onClick={() => onRemoveAssignment(a.id)}
+                      className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-danger"
+                      aria-label="Fjern arbeidskrav"
+                    >
+                      Fjern
+                    </button>
+                  </div>
                 </div>
               ))}
               {grouped[status].length === 0 && <p className="text-xs text-muted">Ingen.</p>}

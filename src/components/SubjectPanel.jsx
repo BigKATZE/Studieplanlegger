@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { Select } from './ui'
 
-export default function SubjectPanel({ subjects, lectures, assignments, onSetLevel, onRemoveSubject }) {
+export default function SubjectPanel({ subjects, lectures, assignments, onSetLevel, onRemoveSubject, onEditSubject }) {
   const stats = useMemo(
     () => new Map(subjects.map((s) => [s.id, computeStats(s, lectures, assignments)])),
     [subjects, lectures, assignments],
@@ -29,6 +29,13 @@ export default function SubjectPanel({ subjects, lectures, assignments, onSetLev
                 </span>
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs text-muted">{s.code}</span>
+                  <button
+                    onClick={() => onEditSubject(s)}
+                    className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-ink"
+                    aria-label={`Rediger fag ${s.short}`}
+                  >
+                    Rediger
+                  </button>
                   <button
                     onClick={() => {
                       if (confirm(`Fjerne «${s.short || s.name}» og alt tilhørende?`)) onRemoveSubject(s.id)
