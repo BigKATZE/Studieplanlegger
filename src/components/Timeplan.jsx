@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { isoWeek, weekRangeByWeek, weekdayShort, DEFAULT_WEEKS } from '../lib/date'
+import { isoWeek, weekRangeByWeek, weekdayShort } from '../lib/date'
 import { SubjectChip, WeekFilter } from './ui'
 
 export default function Timeplan({ lectures, subjects, onToggleLecture, onToggleChapter, onUpdateChapter, onRemoveChapter, onRemoveLecture, onEditLecture }) {
@@ -15,12 +15,16 @@ export default function Timeplan({ lectures, subjects, onToggleLecture, onToggle
       if (!m.has(w)) m.set(w, { week: w, date: new Date(l.date), lectures: [] })
       m.get(w).lectures.push(l)
     })
-    return [...m.values()].sort((a, b) => a.date - b.date)
+    const arr = [...m.values()].sort((a, b) => a.date - b.date)
+    arr.forEach((g) => g.lectures.sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start)))
+    return arr
   }, [lectures])
 
   const groupsByWeek = useMemo(() => new Map(groups.map((g) => [g.week, g])), [groups])
   const weeks = useMemo(() => groups.map((g) => g.week), [groups])
-  const renderWeeks = week == null ? DEFAULT_WEEKS : [week]
+  // Kun uker som faktisk har forelesninger vises som standard, ellers ville siden
+  // vise ~43 tomme «Uke N»-seksjoner for hele skoleåret (DEFAULT_WEEKS).
+  const renderWeeks = week == null ? weeks : [week]
 
   return (
     <section className="mt-6">

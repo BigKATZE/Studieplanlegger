@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { SubjectChip, DeadlineBadge, WeekFilter } from './ui'
-import { isoWeek, weekRangeByWeek, fmtShort, DEFAULT_WEEKS } from '../lib/date'
+import { isoWeek, weekRangeByWeek, fmtShort } from '../lib/date'
 
 export default function Eksamener({ exams, subjects, onRemoveExam, onEditExam }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
@@ -20,7 +20,7 @@ export default function Eksamener({ exams, subjects, onRemoveExam, onEditExam })
 
   const groupsByWeek = useMemo(() => new Map(groups.map((g) => [g.week, g])), [groups])
   const weeks = useMemo(() => groups.map((g) => g.week), [groups])
-  const renderWeeks = week == null ? DEFAULT_WEEKS : [week]
+  const renderWeeks = week == null ? weeks : [week]
 
   return (
     <section className="mt-6">

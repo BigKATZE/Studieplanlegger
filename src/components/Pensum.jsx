@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { SubjectChip, WeekFilter } from './ui'
-import { weekRangeByWeek, DEFAULT_WEEKS } from '../lib/date'
+import { weekRangeByWeek } from '../lib/date'
 
 export default function Pensum({ readings, subjects, onToggleReading, onToggleReadingChapter, onRemoveReading, onEditReading, onAdd }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
@@ -19,7 +19,7 @@ export default function Pensum({ readings, subjects, onToggleReading, onToggleRe
   const noneItems = useMemo(() => groups.find(([wk]) => wk === 'none')?.[1] ?? [], [groups])
   const groupsByWeek = useMemo(() => new Map(groups.filter(([wk]) => wk !== 'none').map(([wk, items]) => [+wk, items])), [groups])
   const weeks = useMemo(() => groups.map(([wk]) => +wk).filter((w) => !Number.isNaN(w)), [groups])
-  const renderWeeks = week == null ? DEFAULT_WEEKS : [week]
+  const renderWeeks = week == null ? weeks : [week]
 
   return (
     <section className="mt-6">

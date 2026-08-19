@@ -3,6 +3,7 @@ import { parseIcs, guessKind, extractCode } from '../lib/ics'
 import { matchSubject } from '../lib/parseSmartInput'
 import { checkFile } from '../lib/upload'
 import { uid } from '../lib/store'
+import { supabase, hasSupabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
 import { Select } from './ui'
 
 const inputCls =
@@ -37,6 +38,27 @@ export default function IcsImport({ subjects, onImport, onClose }) {
     setState('loading')
     setError('')
     try {
+      if (hasSupabase) {
+        // Går via en Edge Function på Supabase-domenet vårt (allerede tillatt av CSP-en),
+        // som henter feeden server-side. Unngår CSP-blokkering og CORS-problemer hos LMS-en.
+        const { data: sessionData } = await supabase.auth.getSession()
+        const token = sessionData.session?.access_token
+        if (!token) {
+          throw new Error('Logg inn for å hente en ekstern kalenderfeed automatisk – eller last opp .ics-filen direkte under.')
+        }
+        const proxyUrl = `${supabaseUrl}/functions/v1/ics-proxy?url=${encodeURIComponent(feedUrl.trim())}`
+        const res = await fetch(proxyUrl, {
+          headers: { Authorization: `Bearer ${token}`, apikey: supabaseAnonKey },
+        })
+        if (!res.ok) {
+          const body = await res.json().catch(() => null)
+          throw new Error(body?.error || `Feed svarte ${res.status}`)
+        }
+        await loadText(await res.text())
+        return
+      }
+      // Ingen Supabase konfigurert (lokal/gjest-modus) – prøv direkte fetch.
+      // Vil ofte feile pga. CORS siden LMS-en ikke sender riktige headere.
       const res = await fetch(feedUrl.trim())
       if (!res.ok) throw new Error(`Feed svarte ${res.status}`)
       const text = await res.text()

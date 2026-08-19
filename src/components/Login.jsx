@@ -9,18 +9,27 @@ export default function Login({ onBack }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [info, setInfo] = useState('')
   const [busy, setBusy] = useState(false)
 
   const submit = async (e) => {
     e.preventDefault()
     setBusy(true)
     setError('')
-    const { error: err } =
-      mode === 'login'
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password })
+    setInfo('')
+    if (mode === 'login') {
+      const { error: err } = await supabase.auth.signInWithPassword({ email, password })
+      setBusy(false)
+      if (err) setError(err.message)
+      return
+    }
+    const { data, error: err } = await supabase.auth.signUp({ email, password })
     setBusy(false)
-    if (err) setError(err.message)
+    if (err) {
+      setError(err.message)
+    } else if (!data.session) {
+      setInfo('Konto opprettet! Sjekk e-posten din for å bekrefte kontoen før du logger inn.')
+    }
   }
 
   return (
@@ -56,6 +65,7 @@ export default function Login({ onBack }) {
             />
           </label>
           {error && <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
+          {info && <p className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">{info}</p>}
           <button type="submit" disabled={busy} className="btn-primary w-full justify-center">
             {busy ? 'Vent…' : mode === 'login' ? 'Logg inn' : 'Opprett konto'}
           </button>

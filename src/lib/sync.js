@@ -119,7 +119,7 @@ export function useStore(user) {
     let alive = true
     const fetchRemote = async () => {
       setReady(false)
-      const { data: row } = await supabase.from('user_data').select('data').eq('user_id', userId).maybeSingle()
+      const { data: row } = await supabase.from('user_data').select('data, updated_at').eq('user_id', userId).maybeSingle()
       if (!alive) return
       if (row?.data) {
         lastSynced.current = new Date(row.updated_at).getTime()
