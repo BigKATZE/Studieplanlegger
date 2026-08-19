@@ -180,7 +180,7 @@ export function ReadingForm({ subjects, lectures, onAdd, onClose, initial }) {
         <Select value={subjectId} onChange={setSubjectId} options={subjects.map((s) => ({ value: s.id, label: s.short }))} ariaLabel="Fag" placeholder="Velg fag" />
       </Field>
       <Field label="Pensum">
-        <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder="Kapittel 3 og 4 – Avtaleloven" />
+        <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder="Avtaleloven – pensum til uken" />
       </Field>
       <Field label="Kapittel (komma-separert, valgfritt)">
         <input className={inputCls} value={chapters} onChange={(e) => setChapters(e.target.value)} placeholder="Kapittel 3, Kapittel 4" />
