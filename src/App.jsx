@@ -342,7 +342,7 @@ export default function App() {
           <button
             onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
             aria-label={theme === 'dark' ? 'Bytt til lys modus' : 'Bytt til mørk modus'}
-            className="rounded p-1 text-sm text-muted hover:text-ink"
+            className="rounded p-1 text-ink hover:text-primary"
           >
             {theme === 'dark' ? (
               <svg className="h-4 w-4" fill="none" viewBox="0 0 20 20">
