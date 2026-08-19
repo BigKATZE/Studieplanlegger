@@ -1,7 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Select } from './ui'
+import { Modal } from './Modals'
 
 export default function SubjectPanel({ subjects, lectures, assignments, onSetLevel, onRemoveSubject, onEditSubject }) {
+  const [removeTarget, setRemoveTarget] = useState(null)
   const stats = useMemo(
     () => new Map(subjects.map((s) => [s.id, computeStats(s, lectures, assignments)])),
     [subjects, lectures, assignments],
@@ -37,9 +39,7 @@ export default function SubjectPanel({ subjects, lectures, assignments, onSetLev
                     Rediger
                   </button>
                   <button
-                    onClick={() => {
-                      if (confirm(`Fjerne «${s.short || s.name}» og alt tilhørende?`)) onRemoveSubject(s.id)
-                    }}
+                    onClick={() => setRemoveTarget(s)}
                     className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-danger"
                     aria-label={`Fjern fag ${s.short}`}
                   >
@@ -68,6 +68,27 @@ export default function SubjectPanel({ subjects, lectures, assignments, onSetLev
           )
         })}
       </div>
+      {removeTarget && (
+        <Modal title="Fjern fag" onClose={() => setRemoveTarget(null)}>
+          <p className="text-sm text-ink">
+            Fjerne <span className="font-medium">{removeTarget.short || removeTarget.name}</span> og alt tilhørende
+            (forelesninger, pensum, arbeidskrav og eksamener)?
+          </p>
+          <div className="mt-4 flex justify-end gap-2">
+            <button type="button" onClick={() => setRemoveTarget(null)} className="btn-ghost">Avbryt</button>
+            <button
+              type="button"
+              onClick={() => {
+                onRemoveSubject(removeTarget.id)
+                setRemoveTarget(null)
+              }}
+              className="btn-danger"
+            >
+              Fjern fag
+            </button>
+          </div>
+        </Modal>
+      )}
     </section>
   )
 }
