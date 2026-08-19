@@ -95,7 +95,7 @@ export default function IcsModal({ subjects, onImport, onClose }) {
             <span className="mb-1 block text-xs font-medium text-muted">Eller last opp .ics-fil</span>
             <input
               type="file"
-              accept=".ics,text/calendar"
+              accept=".ics,.ical,text/calendar"
               onChange={(e) => handleFile(e.target.files?.[0])}
               className="block w-full text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-ink"
             />
