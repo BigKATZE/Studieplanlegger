@@ -1,10 +1,13 @@
-export const DEFAULT_WEEKS = Array.from({ length: 52 - 34 + 1 }, (_, i) => 34 + i)
-const DEFAULT_WEEK_YEAR = 2026
+export const DEFAULT_WEEKS = [
+  ...Array.from({ length: 52 - 34 + 1 }, (_, i) => 34 + i),
+  ...Array.from({ length: 24 }, (_, i) => i + 1),
+]
 
 export function weekRangeByWeek(week) {
-  const jan4 = new Date(Date.UTC(DEFAULT_WEEK_YEAR, 0, 4))
+  const year = week >= 34 ? 2026 : 2027
+  const jan4 = new Date(Date.UTC(year, 0, 4))
   const day = jan4.getUTCDay() || 7
-  const w1 = new Date(Date.UTC(DEFAULT_WEEK_YEAR, 0, 4 - (day - 1)))
+  const w1 = new Date(Date.UTC(year, 0, 4 - (day - 1)))
   return weekRange(new Date(w1.getTime() + (week - 1) * 7 * 86400000))
 }
 
