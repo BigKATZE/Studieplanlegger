@@ -4,6 +4,8 @@ import { daysUntil, fmtShort } from '../lib/date'
 export function Select({ value, onChange, options, className = '', ariaLabel, placeholder = 'Velg…' }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
+  const btnRef = useRef(null)
+  const optionRefs = useRef([])
   useEffect(() => {
     if (!open) return
     const onDoc = (e) => {
@@ -13,13 +15,43 @@ export function Select({ value, onChange, options, className = '', ariaLabel, pl
     return () => document.removeEventListener('mousedown', onDoc)
   }, [open])
   const selected = options.find((o) => o.value === value)
+  const focusOption = (i) => {
+    const n = options.length
+    if (!n) return
+    optionRefs.current[((i % n) + n) % n]?.focus()
+  }
+  const onKeyDown = (e) => {
+    const n = options.length
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (!open) {
+        setOpen(true)
+        focusOption(Math.max(0, options.findIndex((o) => o.value === value)))
+        return
+      }
+      const cur = optionRefs.current.findIndex((el) => el === document.activeElement)
+      focusOption(e.key === 'ArrowDown' ? cur + 1 : cur - 1)
+    } else if (e.key === 'Home' && open) {
+      e.preventDefault()
+      focusOption(0)
+    } else if (e.key === 'End' && open) {
+      e.preventDefault()
+      focusOption(n - 1)
+    } else if (e.key === 'Escape' && open) {
+      e.preventDefault()
+      setOpen(false)
+      btnRef.current?.focus()
+    }
+  }
   return (
-    <div ref={ref} className={`relative ${className}`}>
+    <div ref={ref} className={`relative ${className}`} onKeyDown={onKeyDown}>
       <button
+        ref={btnRef}
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-label={ariaLabel}
         aria-expanded={open}
+        aria-haspopup="listbox"
         className="flex w-full items-center justify-between gap-2 rounded-md border border-line bg-surface px-3 py-2 text-sm transition-colors hover:border-muted focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
       >
         <span className="truncate text-left">{selected ? selected.label : placeholder}</span>
@@ -32,11 +64,14 @@ export function Select({ value, onChange, options, className = '', ariaLabel, pl
         </svg>
       </button>
       {open && (
-        <div className="select-menu absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-line bg-surface p-1 shadow-lg">
-          {options.map((o) => (
+        <div role="listbox" className="select-menu absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-line bg-surface p-1 shadow-lg">
+          {options.map((o, i) => (
             <button
               key={o.value}
+              ref={(el) => (optionRefs.current[i] = el)}
               type="button"
+              role="option"
+              aria-selected={o.value === value}
               onClick={() => {
                 onChange(o.value)
                 setOpen(false)
