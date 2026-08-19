@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { SubjectChip, DeadlineBadge } from './ui'
+import { SubjectChip, DeadlineBadge, Select } from './ui'
 
 const STATUS_LABEL = { not_started: 'Ikke startet', in_progress: 'I arbeid', done: 'Ferdig' }
 const SECTIONS = [
@@ -38,16 +38,13 @@ export default function Gjøremål({ assignments, subjects, onSetAssignmentStatu
                   <DeadlineBadge deadline={a.deadline} />
                   <span className="text-sm font-medium">{a.title}</span>
                   <SubjectChip subject={subjectById[a.subjectId]} />
-                  <select
+                  <Select
                     value={a.status}
-                    onChange={(e) => onSetAssignmentStatus(a.id, e.target.value)}
-                    className="select px-2 py-1 text-xs"
-                    aria-label={`Status for ${a.title}`}
-                  >
-                    {Object.entries(STATUS_LABEL).map(([v, label]) => (
-                      <option key={v} value={v}>{label}</option>
-                    ))}
-                  </select>
+                    onChange={(v) => onSetAssignmentStatus(a.id, v)}
+                    options={Object.entries(STATUS_LABEL).map(([v, label]) => ({ value: v, label }))}
+                    className="w-auto"
+                    ariaLabel={`Status for ${a.title}`}
+                  />
                   <button
                     onClick={() => onRemoveAssignment(a.id)}
                     className="ml-auto rounded p-1 text-xs text-muted hover:bg-paper hover:text-danger"

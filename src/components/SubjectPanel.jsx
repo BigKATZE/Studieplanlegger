@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { Select } from './ui'
 
 export default function SubjectPanel({ subjects, lectures, assignments, onSetLevel, onRemoveSubject }) {
   const stats = useMemo(
@@ -47,17 +48,13 @@ export default function SubjectPanel({ subjects, lectures, assignments, onSetLev
                 <span className="text-xs text-muted">Kunnskapsnivå</span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold">{st.level ? `${st.level}/5` : '–'}</span>
-                  <select
-                    value={s.levelOverride ?? ''}
-                    onChange={(e) => onSetLevel(s.id, e.target.value === '' ? null : Number(e.target.value))}
-                    className="select px-2 py-1 text-xs"
-                    aria-label={`Nivå for ${s.short}`}
-                  >
-                    <option value="">Auto</option>
-                    {[1, 2, 3, 4, 5].map((n) => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                  </select>
+                  <Select
+                    value={String(s.levelOverride ?? '')}
+                    onChange={(v) => onSetLevel(s.id, v === '' ? null : Number(v))}
+                    options={[{ value: '', label: 'Auto' }, ...[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: String(n) }))]}
+                    className="w-auto"
+                    ariaLabel={`Nivå for ${s.short}`}
+                  />
                 </div>
               </div>
             </div>

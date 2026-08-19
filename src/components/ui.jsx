@@ -1,4 +1,58 @@
+import { useEffect, useRef, useState } from 'react'
 import { daysUntil, fmtShort } from '../lib/date'
+
+export function Select({ value, onChange, options, className = '', ariaLabel, placeholder = 'Velg…' }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  useEffect(() => {
+    if (!open) return
+    const onDoc = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [open])
+  const selected = options.find((o) => o.value === value)
+  return (
+    <div ref={ref} className={`relative ${className}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={ariaLabel}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 rounded-md border border-line bg-surface px-3 py-2 text-sm transition-colors hover:border-muted focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
+      >
+        <span className="truncate text-left">{selected ? selected.label : placeholder}</span>
+        <svg
+          className={`h-4 w-4 shrink-0 text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          fill="none"
+          viewBox="0 0 20 20"
+        >
+          <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M6 8l4 4 4-4" />
+        </svg>
+      </button>
+      {open && (
+        <div className="select-menu absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-line bg-surface p-1 shadow-lg">
+          {options.map((o) => (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => {
+                onChange(o.value)
+                setOpen(false)
+              }}
+              className={`block w-full truncate rounded px-2.5 py-1.5 text-left text-sm transition-colors ${
+                o.value === value ? 'bg-secondary/10 font-medium text-ink' : 'text-ink hover:bg-paper'
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function SubjectChip({ subject }) {
   if (!subject) return null

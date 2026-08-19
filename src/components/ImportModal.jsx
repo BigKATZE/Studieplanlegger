@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Modal } from './Modals'
+import { Select } from './ui'
 
 const inputCls =
   'w-full rounded-md border border-line bg-surface px-2 py-1.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20'
@@ -65,11 +66,7 @@ export default function ImportModal({ subjects, onImport, onClose }) {
           <>
             <div>
               <span className="mb-1 block text-xs font-medium text-muted">Import til fag</span>
-              <select className="select w-full" value={subjectId} onChange={(e) => setSubjectId(e.target.value)}>
-                {subjects.map((s) => (
-                  <option key={s.id} value={s.id}>{s.short}</option>
-                ))}
-              </select>
+              <Select value={subjectId} onChange={setSubjectId} options={subjects.map((s) => ({ value: s.id, label: s.short }))} ariaLabel="Import til fag" placeholder="Velg fag" />
             </div>
 
             <p className="text-xs text-muted">

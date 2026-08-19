@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { Modal } from './Modals'
-import { parseIcs } from '../lib/ics'
+import { parseIcs, guessKind } from '../lib/ics'
 import { matchSubject } from '../lib/parseSmartInput'
 import { uid } from '../lib/store'
+import { Select } from './ui'
 
 const inputCls =
   'w-full rounded-md border border-line bg-surface px-3 py-2 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20'
@@ -22,9 +23,9 @@ export default function IcsModal({ subjects, onImport, onClose }) {
     }
     setRows(
       events.map((e) => {
-        const kind = /eksamen|exam|prøve|tentamen/.test(e.title.toLowerCase()) ? 'exam' : 'assignment'
+        const kind = guessKind(e.title)
         const subj = matchSubject(e.title.toLowerCase(), subjects)
-        return { key: uid(), include: true, kind, title: e.title, date: e.date, subjectValue: subj?.id ?? 'new', newName: '' }
+        return { key: uid(), include: true, kind, title: e.title, date: e.date, time: e.time, subjectValue: subj?.id ?? 'new', newName: '' }
       }),
     )
     setState('review')
@@ -104,7 +105,7 @@ export default function IcsModal({ subjects, onImport, onClose }) {
         <div className="space-y-4">
           <p className="text-xs text-muted">
             Fant {rows.length} hendelser. Velg fag for hver rad – ukjente opprettes som nytt fag. Velg om det er
-            arbeidskrav eller eksamen.
+            forelesning, arbeidskrav eller eksamen.
           </p>
           <div className="space-y-2">
             {rows.map((r, i) => (
@@ -117,15 +118,17 @@ export default function IcsModal({ subjects, onImport, onClose }) {
                     className="h-4 w-4 accent-secondary"
                     aria-label={`Inkluder ${r.title}`}
                   />
-                  <select
+                  <Select
                     value={r.kind}
-                    onChange={(e) => patch(i, { kind: e.target.value })}
-                    className="select w-32"
-                    aria-label="Type"
-                  >
-                    <option value="assignment">Arbeidskrav</option>
-                    <option value="exam">Eksamen</option>
-                  </select>
+                    onChange={(v) => patch(i, { kind: v })}
+                    options={[
+                      { value: 'lecture', label: 'Forelesning' },
+                      { value: 'assignment', label: 'Arbeidskrav' },
+                      { value: 'exam', label: 'Eksamen' },
+                    ]}
+                    className="w-32"
+                    ariaLabel="Type"
+                  />
                   <input
                     type="text"
                     value={r.title}
@@ -140,17 +143,13 @@ export default function IcsModal({ subjects, onImport, onClose }) {
                   />
                 </div>
                 <div className="mt-2 flex items-center gap-2">
-                  <select
+                  <Select
                     value={r.subjectValue}
-                    onChange={(e) => patch(i, { subjectValue: e.target.value })}
-                    className="select w-48"
-                    aria-label="Fag"
-                  >
-                    {subjects.map((s) => (
-                      <option key={s.id} value={s.id}>{s.short}</option>
-                    ))}
-                    <option value="new">Nytt fag…</option>
-                  </select>
+                    onChange={(v) => patch(i, { subjectValue: v })}
+                    options={[...subjects.map((s) => ({ value: s.id, label: s.short })), { value: 'new', label: 'Nytt fag…' }]}
+                    className="w-48"
+                    ariaLabel="Fag"
+                  />
                   {r.subjectValue === 'new' && (
                     <input
                       type="text"

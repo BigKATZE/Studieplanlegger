@@ -95,6 +95,7 @@ export default function App() {
       const subjects = [...d.subjects]
       const assignments = [...d.assignments]
       const exams = [...d.exams]
+      const lectures = [...d.lectures]
       for (const r of rows) {
         if (!r.include || !r.title.trim() || !r.date) continue
         let subjectId = r.subjectValue
@@ -115,6 +116,12 @@ export default function App() {
           if (!exams.some((x) => x.subjectId === subjectId && x.title === exam.title && x.date === exam.date)) {
             exams.push(exam)
           }
+        } else if (r.kind === 'lecture') {
+          const start = r.time || '10:00'
+          const lecture = { id: uid(), subjectId, date: r.date, start, end: addMinutes(start, 105), room: '', lecturer: '', topic: r.title.trim(), chapters: [], done: false }
+          if (!lectures.some((x) => x.subjectId === subjectId && x.date === lecture.date && x.topic === lecture.topic)) {
+            lectures.push(lecture)
+          }
         } else {
           const item = { id: uid(), subjectId, title: r.title.trim(), deadline: r.date, status: 'not_started' }
           if (!assignments.some((x) => x.subjectId === subjectId && x.title === item.title && x.deadline === item.deadline)) {
@@ -122,7 +129,7 @@ export default function App() {
           }
         }
       }
-      return { ...d, subjects, assignments, exams }
+      return { ...d, subjects, assignments, exams, lectures }
     }),
     toggleChapter: (lectureId, chapterId) => update((d) => ({
       ...d,

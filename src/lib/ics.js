@@ -17,6 +17,14 @@ function icsDate(value, prop) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
+export function guessKind(title) {
+  const low = title.toLowerCase()
+  if (/eksamen|exam|tentamen|prøve/.test(low)) return 'exam'
+  if (/forelesning|seminar|øving|øvelse|lab|laboratorium|gruppe|colloquium/.test(low)) return 'lecture'
+  if (/innlevering|arbeidskrav|oblig|oppgave|test/.test(low)) return 'assignment'
+  return 'lecture'
+}
+
 export function parseIcs(text) {
   const events = []
   let ev = null
@@ -27,7 +35,7 @@ export function parseIcs(text) {
       continue
     }
     if (upper.startsWith('END:VEVENT')) {
-      if (ev && ev.title && ev.date) events.push({ title: ev.title, date: ev.date })
+      if (ev && ev.title && ev.date) events.push({ title: ev.title, date: ev.date, time: ev.time ?? '' })
       ev = null
       continue
     }
@@ -38,7 +46,11 @@ export function parseIcs(text) {
     const value = line.slice(idx + 1)
     const name = prop.split(';')[0].toUpperCase()
     if (name === 'SUMMARY') ev.title = value.trim()
-    else if (name === 'DTSTART') ev.date = icsDate(value, prop)
+    else if (name === 'DTSTART') {
+      ev.date = icsDate(value, prop)
+      const t = value.match(/T(\d{2})(\d{2})/)
+      ev.time = t ? `${t[1]}:${t[2]}` : ''
+    }
   }
   return events
 }

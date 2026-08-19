@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { uid, SUBJECT_COLORS } from '../lib/store'
 import { isoWeek, weekRange } from '../lib/date'
+import { Select } from './ui'
 
 export function Modal({ title, onClose, children }) {
   return (
@@ -112,11 +113,7 @@ export function LectureForm({ subjects, onAdd, onClose }) {
   return (
     <form onSubmit={submit} className="space-y-4">
       <Field label="Fag">
-        <select className="select w-full" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} required>
-          {subjects.map((s) => (
-            <option key={s.id} value={s.id}>{s.short}</option>
-          ))}
-        </select>
+        <Select value={subjectId} onChange={setSubjectId} options={subjects.map((s) => ({ value: s.id, label: s.short }))} ariaLabel="Fag" placeholder="Velg fag" />
       </Field>
       <div className="grid grid-cols-3 gap-3">
         <Field label="Dato">
@@ -165,22 +162,19 @@ export function ReadingForm({ subjects, lectures, onAdd, onClose }) {
   return (
     <form onSubmit={submit} className="space-y-4">
       <Field label="Fag">
-        <select className="select w-full" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} required>
-          {subjects.map((s) => (
-            <option key={s.id} value={s.id}>{s.short}</option>
-          ))}
-        </select>
+        <Select value={subjectId} onChange={setSubjectId} options={subjects.map((s) => ({ value: s.id, label: s.short }))} ariaLabel="Fag" placeholder="Velg fag" />
       </Field>
       <Field label="Pensum">
         <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder="Kapittel 3 og 4 – Avtaleloven" />
       </Field>
       <Field label="Uke (valgfritt)">
-        <select className="select w-full" value={week} onChange={(e) => setWeek(e.target.value)}>
-          <option value="">Ingen uke</option>
-          {weekOptions.map((o) => (
-            <option key={o.week} value={o.week}>{o.label}</option>
-          ))}
-        </select>
+        <Select
+          value={week}
+          onChange={setWeek}
+          options={[{ value: '', label: 'Ingen uke' }, ...weekOptions.map((o) => ({ value: String(o.week), label: o.label }))]}
+          ariaLabel="Uke"
+          placeholder="Ingen uke"
+        />
       </Field>
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onClose} className="btn-ghost">Avbryt</button>
@@ -234,11 +228,7 @@ export function AssignmentForm({ subjects, onAdd, onClose }) {
   return (
     <form onSubmit={submit} className="space-y-4">
       <Field label="Fag">
-        <select className="select w-full" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} required>
-          {subjects.map((s) => (
-            <option key={s.id} value={s.id}>{s.short}</option>
-          ))}
-        </select>
+        <Select value={subjectId} onChange={setSubjectId} options={subjects.map((s) => ({ value: s.id, label: s.short }))} ariaLabel="Fag" placeholder="Velg fag" />
       </Field>
       <Field label="Tittel">
         <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus placeholder="Arbeidskrav 1 – …" />
@@ -268,11 +258,7 @@ export function ExamForm({ subjects, onAdd, onClose }) {
   return (
     <form onSubmit={submit} className="space-y-4">
       <Field label="Fag">
-        <select className="select w-full" value={subjectId} onChange={(e) => setSubjectId(e.target.value)} required>
-          {subjects.map((s) => (
-            <option key={s.id} value={s.id}>{s.short}</option>
-          ))}
-        </select>
+        <Select value={subjectId} onChange={setSubjectId} options={subjects.map((s) => ({ value: s.id, label: s.short }))} ariaLabel="Fag" placeholder="Velg fag" />
       </Field>
       <Field label="Type eksamen">
         <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus />
