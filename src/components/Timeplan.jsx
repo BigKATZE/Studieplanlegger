@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react'
 import { isoWeek, weekRange, weekdayShort } from '../lib/date'
 import { SubjectChip, WeekFilter } from './ui'
 
-export default function Timeplan({ lectures, subjects, onToggleLecture, onToggleChapter, onRemoveLecture, onEditLecture }) {
+export default function Timeplan({ lectures, subjects, onToggleLecture, onToggleChapter, onUpdateChapter, onRemoveChapter, onRemoveLecture, onEditLecture }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
   const [week, setWeek] = useState(null)
+  const [editingChapter, setEditingChapter] = useState(null)
+  const [chapterText, setChapterText] = useState('')
 
   const groups = useMemo(() => {
     const m = new Map()
@@ -67,15 +69,13 @@ export default function Timeplan({ lectures, subjects, onToggleLecture, onToggle
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => onEditLecture(l)}
-                          className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-ink"
-                          aria-label="Rediger forelesning"
+                          className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:border-primary hover:text-primary"
                         >
                           Rediger
                         </button>
                         <button
                           onClick={() => onRemoveLecture(l.id)}
-                          className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-danger"
-                          aria-label="Fjern forelesning"
+                          className="rounded-md border border-line px-2 py-1 text-xs font-medium text-muted hover:border-danger hover:text-danger"
                         >
                           Fjern
                         </button>
@@ -85,16 +85,57 @@ export default function Timeplan({ lectures, subjects, onToggleLecture, onToggle
                     {l.chapters.length > 0 && (
                       <ul className="mt-2 space-y-1 pl-6">
                         {l.chapters.map((c) => (
-                          <li key={c.id}>
-                            <label className="flex cursor-pointer items-center gap-2 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={c.done}
-                                onChange={() => onToggleChapter(l.id, c.id)}
-                                className="h-4 w-4 accent-secondary"
-                              />
-                              <span className={c.done ? 'text-muted line-through' : ''}>{c.text}</span>
-                            </label>
+                          <li key={c.id} className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={c.done}
+                              onChange={() => onToggleChapter(l.id, c.id)}
+                              className="h-4 w-4 accent-secondary"
+                            />
+                            {editingChapter === c.id ? (
+                              <>
+                                <input
+                                  value={chapterText}
+                                  onChange={(e) => setChapterText(e.target.value)}
+                                  className="flex-1 rounded-md border border-line bg-paper px-2 py-1 text-sm focus:border-secondary focus:outline-none"
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={() => {
+                                    if (chapterText.trim()) onUpdateChapter(l.id, c.id, chapterText.trim())
+                                    setEditingChapter(null)
+                                  }}
+                                  className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:border-primary hover:text-primary"
+                                >
+                                  Lagre
+                                </button>
+                                <button
+                                  onClick={() => setEditingChapter(null)}
+                                  className="rounded-md border border-line px-2 py-1 text-xs text-muted hover:text-ink"
+                                >
+                                  Avbryt
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <span className={`flex-1 text-sm ${c.done ? 'text-muted line-through' : ''}`}>{c.text}</span>
+                                <button
+                                  onClick={() => {
+                                    setEditingChapter(c.id)
+                                    setChapterText(c.text)
+                                  }}
+                                  className="rounded-md border border-line px-2 py-1 text-xs font-medium text-muted hover:border-primary hover:text-primary"
+                                >
+                                  Rediger
+                                </button>
+                                <button
+                                  onClick={() => onRemoveChapter(l.id, c.id)}
+                                  className="rounded-md border border-line px-2 py-1 text-xs font-medium text-muted hover:border-danger hover:text-danger"
+                                >
+                                  Fjern
+                                </button>
+                              </>
+                            )}
                           </li>
                         ))}
                       </ul>

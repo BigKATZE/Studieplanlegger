@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { daysUntil, fmtShort } from '../lib/date'
+import { daysUntil, fmtShort, DEFAULT_WEEKS } from '../lib/date'
 
 export function Select({ value, onChange, options, className = '', ariaLabel, placeholder = 'Velg…' }) {
   const [open, setOpen] = useState(false)
@@ -83,7 +83,7 @@ export function WeekFilter({ weeks, active, onChange }) {
     <Select
       value={active == null ? '' : String(active)}
       onChange={(v) => onChange(v === '' ? null : Number(v))}
-      options={[{ value: '', label: 'Alle uker' }, ...weeks.map((w) => ({ value: String(w), label: `Uke ${w}` }))]}
+      options={[{ value: '', label: 'Alle uker' }, ...(weeks.length > 0 ? weeks : DEFAULT_WEEKS).map((w) => ({ value: String(w), label: `Uke ${w}` }))]}
       className="w-36"
       ariaLabel="Filtrer på uke"
     />

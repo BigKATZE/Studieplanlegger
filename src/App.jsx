@@ -162,6 +162,20 @@ export default function App() {
           : l,
       ),
     })),
+    updateChapter: (lectureId, chapterId, text) => update((d) => ({
+      ...d,
+      lectures: d.lectures.map((l) =>
+        l.id === lectureId
+          ? { ...l, chapters: l.chapters.map((c) => (c.id === chapterId ? { ...c, text } : c)) }
+          : l,
+      ),
+    })),
+    removeChapter: (lectureId, chapterId) => update((d) => ({
+      ...d,
+      lectures: d.lectures.map((l) =>
+        l.id === lectureId ? { ...l, chapters: l.chapters.filter((c) => c.id !== chapterId) } : l,
+      ),
+    })),
     toggleLecture: (lectureId) => update((d) => ({
       ...d,
       lectures: d.lectures.map((l) => (l.id === lectureId ? { ...l, done: !l.done } : l)),
@@ -364,6 +378,8 @@ export default function App() {
               subjects={data.subjects}
               onToggleLecture={actions.toggleLecture}
               onToggleChapter={actions.toggleChapter}
+              onUpdateChapter={actions.updateChapter}
+              onRemoveChapter={actions.removeChapter}
               onRemoveLecture={actions.removeLecture}
               onEditLecture={(l) => openEdit('lecture', l)}
             />
