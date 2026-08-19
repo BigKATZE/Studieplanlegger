@@ -21,9 +21,22 @@ test('app loads, pensum tab og fagfilter fungerer', async ({ page }) => {
     refresh_token: 'fake',
     user,
   }
-  await page.addInitScript((s) => {
-    localStorage.setItem('sb-icihdeerjveozgotyqbm-auth-token', JSON.stringify(s))
-  }, session)
+  await page.addInitScript(({ session, data }) => {
+    localStorage.setItem('sb-icihdeerjveozgotyqbm-auth-token', JSON.stringify(session))
+    localStorage.setItem(
+      'oliarev-study-planner-v2-00000000-0000-0000-0000-000000000000',
+      JSON.stringify(data),
+    )
+  }, {
+    session,
+    data: {
+      subjects: [{ id: 's1', code: 'JUR3420', name: 'Forretningsjus', short: 'Forretningsjus', color: '#7c3aed', levelOverride: null }],
+      lectures: [],
+      assignments: [{ id: 'a1', subjectId: 's1', title: 'Arbeidskrav 1 – Obligasjonsrett', deadline: '2026-10-01', status: 'not_started' }],
+      exams: [],
+      readings: [],
+    },
+  })
 
   await page.goto('/')
   await expect(page.getByRole('heading', { name: 'Studieplanlegger' })).toBeVisible()

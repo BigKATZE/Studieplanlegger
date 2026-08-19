@@ -2,7 +2,7 @@ import { useEffect, useCallback, useState } from 'react'
 import { supabase, hasSupabase } from './supabase'
 import { load } from './store'
 
-const unscopedKey = 'oliarev-study-planner-v1'
+const unscopedKey = 'oliarev-study-planner-v2'
 const cacheKey = (userId) => (hasSupabase ? `${unscopedKey}-${userId}` : unscopedKey)
 
 function normalize(data) {
