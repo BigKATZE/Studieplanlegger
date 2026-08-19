@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Modal } from './Modals'
 import { Select } from './ui'
+import { checkFile } from '../lib/upload'
 import IcsImport from './IcsModal'
 
 const inputCls =
@@ -18,6 +19,11 @@ function PdfImport({ subjects, onImport, onClose }) {
 
   const handleFile = async (file) => {
     if (!file) return
+    const err = checkFile(file, { maxBytes: 10 * 1024 * 1024, types: ['application/pdf'], extensions: ['pdf'] })
+    if (err) {
+      setError(err)
+      return
+    }
     setState('parsing')
     setError('')
     try {

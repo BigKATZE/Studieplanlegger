@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { parseIcs, guessKind, extractCode } from '../lib/ics'
 import { matchSubject } from '../lib/parseSmartInput'
+import { checkFile } from '../lib/upload'
 import { uid } from '../lib/store'
 import { Select } from './ui'
 
@@ -38,7 +39,9 @@ export default function IcsImport({ subjects, onImport, onClose }) {
     try {
       const res = await fetch(feedUrl.trim())
       if (!res.ok) throw new Error(`Feed svarte ${res.status}`)
-      await loadText(await res.text())
+      const text = await res.text()
+      if (text.length > 2 * 1024 * 1024) throw new Error('Feed-en er for stor (over 2 MB).')
+      await loadText(text)
     } catch (err) {
       console.error(err)
       setError(
@@ -52,6 +55,11 @@ export default function IcsImport({ subjects, onImport, onClose }) {
 
   const handleFile = async (file) => {
     if (!file) return
+    const err = checkFile(file, { maxBytes: 2 * 1024 * 1024, types: ['text/calendar'], extensions: ['ics', 'ical'] })
+    if (err) {
+      setError(err)
+      return
+    }
     setError('')
     await loadText(await file.text())
   }
