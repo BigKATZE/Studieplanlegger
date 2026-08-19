@@ -33,4 +33,7 @@
   .chip {
     @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
   }
+  .btn-chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-sm font-medium text-ink transition-colors hover:bg-paper;
+  }
 }

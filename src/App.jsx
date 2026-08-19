@@ -10,7 +10,7 @@ import ImportModal from './components/ImportModal'
 import CanvasModal from './components/CanvasModal'
 import IcsModal from './components/IcsModal'
 import { Modal, SubjectForm, LectureForm, AssignmentForm, ExamForm } from './components/Modals'
-import { DeadlineStrip } from './components/ui'
+import { DeadlineStrip, SubjectFilter } from './components/ui'
 
 function useStore() {
   const [data, setData] = useState(load)
@@ -55,6 +55,9 @@ export default function App() {
   const [data, update] = useStore()
   const [tab, setTab] = useState('timeplan')
   const [modal, setModal] = useState(null)
+  const [filterSubjectId, setFilterSubjectId] = useState(null)
+
+  const bySubject = (items) => (filterSubjectId ? items.filter((i) => i.subjectId === filterSubjectId) : items)
 
   const actions = {
     addSubject: (s) => update((d) => ({
@@ -261,30 +264,39 @@ export default function App() {
         )}
 
         {tab === 'timeplan' && (
-          <Timeplan
-            lectures={data.lectures}
-            subjects={data.subjects}
-            onToggleLecture={actions.toggleLecture}
-            onToggleChapter={actions.toggleChapter}
-            onRemoveLecture={actions.removeLecture}
-          />
+          <>
+            <SubjectFilter subjects={data.subjects} active={filterSubjectId} onChange={setFilterSubjectId} />
+            <Timeplan
+              lectures={bySubject(data.lectures)}
+              subjects={data.subjects}
+              onToggleLecture={actions.toggleLecture}
+              onToggleChapter={actions.toggleChapter}
+              onRemoveLecture={actions.removeLecture}
+            />
+          </>
         )}
 
         {tab === 'tasks' && (
-          <Gjøremål
-            assignments={data.assignments}
-            subjects={data.subjects}
-            onSetAssignmentStatus={actions.setAssignmentStatus}
-            onRemoveAssignment={actions.removeAssignment}
-          />
+          <>
+            <SubjectFilter subjects={data.subjects} active={filterSubjectId} onChange={setFilterSubjectId} />
+            <Gjøremål
+              assignments={bySubject(data.assignments)}
+              subjects={data.subjects}
+              onSetAssignmentStatus={actions.setAssignmentStatus}
+              onRemoveAssignment={actions.removeAssignment}
+            />
+          </>
         )}
 
         {tab === 'exams' && (
-          <Eksamener
-            exams={data.exams}
-            subjects={data.subjects}
-            onRemoveExam={actions.removeExam}
-          />
+          <>
+            <SubjectFilter subjects={data.subjects} active={filterSubjectId} onChange={setFilterSubjectId} />
+            <Eksamener
+              exams={bySubject(data.exams)}
+              subjects={data.subjects}
+              onRemoveExam={actions.removeExam}
+            />
+          </>
         )}
       </main>
 

@@ -24,6 +24,32 @@ export function DeadlineBadge({ deadline }) {
   )
 }
 
+export function SubjectFilter({ subjects, active, onChange }) {
+  return (
+    <div className="mt-6 flex flex-wrap items-center gap-2">
+      <button
+        onClick={() => onChange(null)}
+        className={`btn-chip ${active === null ? 'border-primary bg-primary text-white' : ''}`}
+      >
+        Alle
+      </button>
+      {subjects.map((s) => {
+        const isActive = active === s.id
+        return (
+          <button
+            key={s.id}
+            onClick={() => onChange(isActive ? null : s.id)}
+            className={`btn-chip ${isActive ? 'border-primary bg-primary text-white' : ''}`}
+          >
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: isActive ? '#fff' : s.color }} />
+            {s.short}
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export function DeadlineStrip({ assignments = [], exams = [], subjects }) {
   const upcoming = [
     ...assignments
