@@ -137,7 +137,98 @@ function PdfImport({ subjects, onImport, onClose }) {
   )
 }
 
-export default function ImportModal({ subjects, onImportPdf, onImportIcs, onClose }) {
+function BackupTab({ data, onImport, onClose }) {
+  const [error, setError] = useState('')
+  const [confirm, setConfirm] = useState(null)
+  const [fileName, setFileName] = useState('')
+
+  const exportJson = () => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `studieplanlegger-${new Date().toISOString().slice(0, 10)}.json`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleFile = async (file) => {
+    if (!file) return
+    setError('')
+    try {
+      const parsed = JSON.parse(await file.text())
+      const keys = ['subjects', 'lectures', 'assignments', 'exams', 'readings']
+      if (!parsed || typeof parsed !== 'object' || keys.some((k) => !Array.isArray(parsed[k]))) {
+        setError('Ugyldig fil. Dette ser ikke ut til å være en eksportert sikkerhetskopi.')
+        return
+      }
+      setFileName(file.name)
+      setConfirm(parsed)
+    } catch {
+      setError('Kunne ikke lese filen. Sjekk at den er gyldig JSON.')
+    }
+  }
+
+  const counts = confirm && {
+    subjects: confirm.subjects.length,
+    lectures: confirm.lectures.length,
+    readings: confirm.readings.length,
+    assignments: confirm.assignments.length,
+    exams: confirm.exams.length,
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-sm text-ink">Eksporter alt innhold som en JSON-fil.</p>
+          <p className="text-xs text-muted">Nyttig som sikkerhetskopi eller for å flytte mellom nettlesere.</p>
+        </div>
+        <button type="button" onClick={exportJson} className="btn-ghost">Eksporter data</button>
+      </div>
+
+      <div className="border-t border-line pt-4">
+        <span className="mb-1 block text-xs font-medium text-muted">Importer sikkerhetskopi</span>
+        <input
+          type="file"
+          accept="application/json,.json"
+          onChange={(e) => handleFile(e.target.files?.[0])}
+          className="block w-full text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-ink"
+        />
+        <p className="mt-1 text-xs text-muted">Importering erstatter alt nåværende innhold.</p>
+      </div>
+
+      {error && <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
+
+      {confirm && (
+        <div className="rounded-md border border-line bg-paper/60 p-3 text-sm">
+          <p className="text-ink">
+            «{fileName}» inneholder {counts.subjects} fag, {counts.lectures} forelesninger, {counts.readings} pensum,{' '}
+            {counts.assignments} arbeidskrav og {counts.exams} eksamener.
+          </p>
+          <p className="mt-1 text-xs text-muted">Erstatte alt nåværende innhold med dette?</p>
+          <div className="mt-3 flex justify-end gap-2">
+            <button type="button" onClick={() => setConfirm(null)} className="btn-ghost">Avbryt</button>
+            <button
+              type="button"
+              onClick={() => {
+                onImport(confirm)
+                onClose()
+              }}
+              className="btn-primary"
+            >
+              Erstatt og importer
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function ImportModal({ subjects, data, onImportPdf, onImportIcs, onImportBackup, onClose }) {
   const [mode, setMode] = useState('pdf')
   return (
     <Modal title="Importer" onClose={onClose}>
@@ -145,6 +236,7 @@ export default function ImportModal({ subjects, onImportPdf, onImportIcs, onClos
         {[
           ['pdf', 'Timeplan (PDF)'],
           ['ical', 'iCal'],
+          ['backup', 'Sikkerhetskopi'],
         ].map(([m, label]) => (
           <button
             key={m}
@@ -159,8 +251,10 @@ export default function ImportModal({ subjects, onImportPdf, onImportIcs, onClos
       </div>
       {mode === 'pdf' ? (
         <PdfImport subjects={subjects} onImport={onImportPdf} onClose={onClose} />
-      ) : (
+      ) : mode === 'ical' ? (
         <IcsImport subjects={subjects} onImport={onImportIcs} onClose={onClose} />
+      ) : (
+        <BackupTab data={data} onImport={onImportBackup} onClose={onClose} />
       )}
     </Modal>
   )

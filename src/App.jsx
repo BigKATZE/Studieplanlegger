@@ -515,8 +515,10 @@ export default function App() {
       {modal === 'import' && (
         <ImportModal
           subjects={data.subjects}
+          data={data}
           onImportPdf={actions.importLectures}
           onImportIcs={actions.icsImport}
+          onImportBackup={(d) => removeWithUndo('Importerte sikkerhetskopi', () => d)}
           onClose={closeModal}
         />
       )}
