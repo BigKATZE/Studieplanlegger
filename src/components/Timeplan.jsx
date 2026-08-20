@@ -2,9 +2,8 @@ import { useMemo, useState } from 'react'
 import { isoWeek, weekRangeByWeek, weekdayShort, fmtShort, DEFAULT_WEEKS } from '../lib/date'
 import { SubjectChip, WeekFilter } from './ui'
 
-export default function Timeplan({ lectures, subjects, onToggleLecture, onToggleChapter, onUpdateChapter, onRemoveChapter, onRemoveLecture, onEditLecture }) {
+export default function Timeplan({ lectures, subjects, week, onWeekChange, onToggleLecture, onToggleChapter, onUpdateChapter, onRemoveChapter, onRemoveLecture, onEditLecture }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
-  const [week, setWeek] = useState(null)
   const [editingChapter, setEditingChapter] = useState(null)
   const [chapterText, setChapterText] = useState('')
 
@@ -28,7 +27,7 @@ export default function Timeplan({ lectures, subjects, onToggleLecture, onToggle
     <section className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Uke for uke</h2>
-        <WeekFilter weeks={weeks} active={week} onChange={setWeek} />
+        <WeekFilter weeks={weeks} active={week} onChange={onWeekChange} />
       </div>
       {lectures.length === 0 && (
         <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">

@@ -12,6 +12,7 @@ import Eksamener from './components/Eksamener'
 import SmartInput from './components/SmartInput'
 import ImportModal from './components/ImportModal'
 import PasswordForm from './components/PasswordForm'
+import SearchModal from './components/SearchModal'
 import { Modal, SubjectForm, LectureForm, AssignmentForm, ExamForm, ReadingForm } from './components/Modals'
 import { DeadlineStrip, SubjectFilter } from './components/ui'
 
@@ -54,6 +55,8 @@ export default function App() {
   const [filterSubjectId, setFilterSubjectId] = useState(null)
   const [showLogin, setShowLogin] = useState(false)
   const [undo, setUndo] = useState(null)
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [timeplanWeek, setTimeplanWeek] = useState(null)
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('planner-theme')
     if (saved) return saved
@@ -70,6 +73,17 @@ export default function App() {
     const t = setTimeout(() => setUndo(null), 6000)
     return () => clearTimeout(t)
   }, [undo])
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
 
   if (authStatus === 'loading') {
     return (
@@ -335,10 +349,36 @@ export default function App() {
     }
   }
 
+  const handleSearchSelect = (sel) => {
+    setSearchOpen(false)
+    if (sel.kind === 'subject') {
+      setTab('overview')
+    } else if (sel.kind === 'lecture') {
+      setTab('timeplan')
+      setTimeplanWeek(isoWeek(new Date(sel.result.lecture.date)))
+    } else if (sel.kind === 'reading') {
+      setTab('reading')
+    } else if (sel.kind === 'assignment') {
+      setTab('tasks')
+    } else if (sel.kind === 'exam') {
+      setTab('exams')
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <header className="relative mx-auto max-w-5xl px-4 pb-6 pt-12">
         <div className="absolute right-4 top-4 flex items-center gap-2">
+          <button
+            onClick={() => setSearchOpen(true)}
+            aria-label="Søk (Ctrl+K)"
+            title="Søk (Ctrl+K)"
+            className="rounded p-1 text-ink hover:text-primary"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            </svg>
+          </button>
           <button
             onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
             aria-label={theme === 'dark' ? 'Bytt til lys modus' : 'Bytt til mørk modus'}
@@ -436,6 +476,8 @@ export default function App() {
             <Timeplan
               lectures={bySubject(data.lectures)}
               subjects={data.subjects}
+              week={timeplanWeek}
+              onWeekChange={setTimeplanWeek}
               onToggleLecture={actions.toggleLecture}
               onToggleChapter={actions.toggleChapter}
               onUpdateChapter={actions.updateChapter}
@@ -526,6 +568,10 @@ export default function App() {
         <Modal title="Endre passord" onClose={closeModal}>
           <PasswordForm onClose={closeModal} />
         </Modal>
+      )}
+
+      {searchOpen && (
+        <SearchModal data={data} onClose={() => setSearchOpen(false)} onSelect={handleSearchSelect} />
       )}
 
       {undo && (
