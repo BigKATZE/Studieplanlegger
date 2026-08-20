@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Select } from './ui'
 import { Modal } from './Modals'
 
-export default function SubjectPanel({ subjects, lectures, assignments, onSetLevel, onRemoveSubject, onEditSubject }) {
+export default function SubjectPanel({ subjects, lectures, assignments, onSetLevel, onRemoveSubject, onEditSubject, onShare, canShare }) {
   const [removeTarget, setRemoveTarget] = useState(null)
   const stats = useMemo(
     () => new Map(subjects.map((s) => [s.id, computeStats(s, lectures, assignments)])),
@@ -31,6 +31,15 @@ export default function SubjectPanel({ subjects, lectures, assignments, onSetLev
                 </span>
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs text-muted">{s.code}</span>
+                  {canShare && (
+                    <button
+                      onClick={() => onShare(s)}
+                      className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-ink"
+                      aria-label={`Del fag ${s.short}`}
+                    >
+                      Del
+                    </button>
+                  )}
                   <button
                     onClick={() => onEditSubject(s)}
                     className="rounded p-1 text-xs text-muted hover:bg-paper hover:text-ink"

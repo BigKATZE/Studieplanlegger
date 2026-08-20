@@ -33,10 +33,18 @@ Finner du disse i Supabase-dashboardet under **Project Settings → API**. `serv
 1. Opprett prosjektet i Supabase-dashboardet.
 2. Sett `VITE_SUPABASE_URL` og `VITE_SUPABASE_ANON_KEY` som beskrevet over, både lokalt og i Vercel-prosjektets env-variabler.
 3. Opprett tabellen `user_data` og aktiver RLS – SQL-en ligger i [`supabase/migrations/20260819000000_user_data_rls.sql`](supabase/migrations/20260819000000_user_data_rls.sql) og kan kjøres i **SQL Editor**. Den er idempotent.
-4. Deploy Edge Function for kalenderfeeder:
+4. Deploy Edge Functions:
    ```bash
    supabase functions deploy ics-proxy
+   supabase functions deploy shared-subject --no-verify-jwt
    ```
+5. Kjør migrasjonen for delingslenker i **SQL Editor**:
+   [`supabase/migrations/20260820000000_shared_links.sql`](supabase/migrations/20260820000000_shared_links.sql) (idempotent).
+
+Delingslenker (per fag) lar hvem som helst se timeplan og pensum for ett fag
+uten innlogging. Se
+[`supabase/functions/shared-subject/README.md`](supabase/functions/shared-subject/README.md)
+for sikkerhetsmodellen.
 
 ## Scripts
 

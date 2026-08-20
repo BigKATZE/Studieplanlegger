@@ -13,6 +13,8 @@ import SmartInput from './components/SmartInput'
 import ImportModal from './components/ImportModal'
 import PasswordForm from './components/PasswordForm'
 import SearchModal from './components/SearchModal'
+import ShareModal from './components/ShareModal'
+import DeltFag from './components/DeltFag'
 import { Modal, SubjectForm, LectureForm, AssignmentForm, ExamForm, ReadingForm } from './components/Modals'
 import { DeadlineStrip, SubjectFilter } from './components/ui'
 
@@ -57,6 +59,8 @@ export default function App() {
   const [undo, setUndo] = useState(null)
   const [searchOpen, setSearchOpen] = useState(false)
   const [timeplanWeek, setTimeplanWeek] = useState(null)
+  const [shareSubject, setShareSubject] = useState(null)
+  const [sharedToken] = useState(() => new URLSearchParams(window.location.search).get('del'))
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('planner-theme')
     if (saved) return saved
@@ -84,6 +88,10 @@ export default function App() {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [])
+
+  if (sharedToken) {
+    return <DeltFag token={sharedToken} />
+  }
 
   if (authStatus === 'loading') {
     return (
@@ -461,6 +469,8 @@ export default function App() {
               onSetLevel={actions.setLevel}
               onRemoveSubject={actions.removeSubject}
               onEditSubject={(s) => openEdit('subject', s)}
+              onShare={setShareSubject}
+              canShare={Boolean(hasSupabase && user && user.id !== 'local')}
             />
             <DeadlineStrip
               assignments={data.assignments}
@@ -572,6 +582,10 @@ export default function App() {
 
       {searchOpen && (
         <SearchModal data={data} onClose={() => setSearchOpen(false)} onSelect={handleSearchSelect} />
+      )}
+
+      {shareSubject && user && (
+        <ShareModal subject={shareSubject} userId={user.id} onClose={() => setShareSubject(null)} />
       )}
 
       {undo && (
