@@ -74,6 +74,34 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
   useEffect(() => { submitExamRef.current = submitExam }, [submitExam])
   const normalizedQuestionCount = Math.min(15, Math.max(3, Number(questionCount) || 5))
 
+  const evaluateAllQuiz = async () => {
+    if (!result?.questions) return
+    const answered = result.questions.map((item, index) => ({ item, index, userAnswer: answerInputs[index]?.trim() || '' })).filter((entry) => entry.userAnswer)
+    if (!answered.length) { setError('Skriv minst ett svar før du vurderer.'); return }
+    setLoading(true)
+    setError('')
+    try {
+      const questions = answered.map(({ item, userAnswer }) => ({ question: item.question, expectedAnswer: item.answer, userAnswer }))
+      const { data: evaluation, error: invokeError } = await supabase.functions.invoke('study-suggestions', {
+        body: buildAiRequest('exam-feedback', 'vurder svar', {}, { questions }),
+      })
+      if (invokeError) throw new Error()
+      const nextFeedback = {}
+      answered.forEach(({ index, item }, i) => {
+        const per = evaluation.perQuestion[i]
+        const verdict = per.score >= 8 ? 'correct' : per.score >= 4 ? 'partial' : 'incorrect'
+        nextFeedback[index] = { feedback: per.feedback, verdict, score: per.score }
+        onAddAttempt?.({ subjectId, sourceId: '', question: item.question, expectedAnswer: item.answer, userAnswer: answerInputs[index], verdict, feedback: per.feedback })
+        if (verdict !== 'correct') onAddReview?.({ subjectId, title: item.question, details: item.answer })
+      })
+      setFeedbackByQuestion((previous) => ({ ...previous, ...nextFeedback }))
+    } catch {
+      setError('Kunne ikke vurdere svarene. Prøv igjen.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const selectTool = (next) => {
     setTool(next)
     setText('')
@@ -375,12 +403,19 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
 
       {result && tool === 'quiz' && (
         <section className="mt-6 rounded-lg border border-line bg-surface p-5">
-          <h3 className="font-display text-lg font-semibold">Øvingsspørsmål</h3>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-display text-lg font-semibold">Øvingsspørsmål</h3>
+            <span className="text-xs text-muted">1 forespørsel per vurdering — bruk “alle” for å spare kvote</span>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button type="button" disabled={loading} onClick={evaluateAllQuiz} className="btn-primary !min-h-8 !px-3 !py-1.5 text-xs disabled:opacity-50">Vurder alle svar (1 av 25)</button>
+            <span className="self-center text-xs text-muted">Vurderer alle utfylte svar i én operasjon.</span>
+          </div>
           <ol className="mt-4 space-y-3">
             {result.questions.map((item, index) => (
               <li key={`${item.question}-${index}`} className="rounded-md bg-paper p-4">
                 <p className="text-sm font-semibold">{index + 1}. {item.question}</p>
-                <details className="mt-2 text-sm"><summary className="cursor-pointer text-secondary">Vis svar</summary><p className="mt-2 text-muted">{item.answer}</p></details><textarea aria-label={`Ditt svar på ${item.question}`} value={answerInputs[index] || ''} onChange={(event) => setAnswerInputs((value) => ({ ...value, [index]: event.target.value }))} className="mt-3 w-full rounded-md border border-line bg-surface p-2 text-sm" rows="2" placeholder="Skriv ditt svar" /><button type="button" className="btn-ghost mt-2 !min-h-8 !px-2 !py-1 text-xs" onClick={async () => { const userAnswer = answerInputs[index]?.trim(); if (!userAnswer) return; setLoading(true); try { const { data: feedback, error: invokeError } = await supabase.functions.invoke('study-suggestions', { body: buildAiRequest('feedback', 'vurder svar', {}, { question: item.question, expectedAnswer: item.answer, userAnswer }) }); if (invokeError) throw new Error(); setFeedbackByQuestion((v) => ({ ...v, [index]: feedback })); onAddAttempt?.({ subjectId, sourceId: '', question: item.question, expectedAnswer: item.answer, userAnswer, verdict: feedback.verdict, feedback: feedback.feedback }); if (feedback.verdict !== 'correct') onAddReview?.({ subjectId, title: item.question, details: item.answer }) } catch { setError('Kunne ikke vurdere svaret.') } finally { setLoading(false) } }}>Vurder svar</button>{feedbackByQuestion[index] && <p className="mt-2 text-sm text-muted">{feedbackByQuestion[index].feedback} ({feedbackByQuestion[index].verdict})</p>}
+                <details className="mt-2 text-sm"><summary className="cursor-pointer text-secondary">Vis svar</summary><p className="mt-2 text-muted">{item.answer}</p></details><textarea aria-label={`Ditt svar på ${item.question}`} value={answerInputs[index] || ''} onChange={(event) => setAnswerInputs((value) => ({ ...value, [index]: event.target.value }))} className="mt-3 w-full rounded-md border border-line bg-surface p-2 text-sm" rows="2" placeholder="Skriv ditt svar" /><button type="button" className="btn-ghost mt-2 !min-h-8 !px-2 !py-1 text-xs" onClick={async () => { const userAnswer = answerInputs[index]?.trim(); if (!userAnswer) return; setLoading(true); try { const { data: feedback, error: invokeError } = await supabase.functions.invoke('study-suggestions', { body: buildAiRequest('feedback', 'vurder svar', {}, { question: item.question, expectedAnswer: item.answer, userAnswer }) }); if (invokeError) throw new Error(); setFeedbackByQuestion((v) => ({ ...v, [index]: feedback })); onAddAttempt?.({ subjectId, sourceId: '', question: item.question, expectedAnswer: item.answer, userAnswer, verdict: feedback.verdict, feedback: feedback.feedback }); if (feedback.verdict !== 'correct') onAddReview?.({ subjectId, title: item.question, details: item.answer }) } catch { setError('Kunne ikke vurdere svaret.') } finally { setLoading(false) } }}>Vurder dette ene (1 av 25)</button>{feedbackByQuestion[index] && <p className="mt-2 text-sm text-muted">{feedbackByQuestion[index].feedback} ({feedbackByQuestion[index].verdict}{feedbackByQuestion[index].score != null ? `, ${feedbackByQuestion[index].score}/10` : ''})</p>}
                 <button className="btn-ghost mt-3 !min-h-8 !px-2 !py-1 text-xs" onClick={() => onAddReview?.({ subjectId, title: item.question, details: item.answer })}>Legg til repetisjon</button>
               </li>
             ))}
