@@ -19,7 +19,10 @@ function looseCode(code) {
 export function matchSubject(low, subjects) {
   if (!subjects?.length) return null
   const n = norm(low)
-  for (const s of subjects) if (n.includes(norm(s.code))) return s
+  for (const s of subjects) {
+    const code = norm(s.code ?? '')
+    if (code && n.includes(code)) return s
+  }
   for (const s of subjects) if (norm(s.short).length >= 3 && n.includes(norm(s.short))) return s
   for (const s of subjects) if (norm(s.name).length >= 4 && n.includes(norm(s.name))) return s
   return null
@@ -27,6 +30,11 @@ export function matchSubject(low, subjects) {
 
 function isoStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function validDate(year, month, day) {
+  const date = new Date(year, month - 1, day)
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day ? date : null
 }
 
 function nextWeekday(name) {
@@ -50,14 +58,15 @@ function rollToNextYearIfPast(date) {
 
 function matchDate(low) {
   const isoM = low.match(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/)
-  if (isoM) return new Date(+isoM[1], +isoM[2] - 1, +isoM[3])
+  if (isoM) return validDate(+isoM[1], +isoM[2], +isoM[3])
   const dmy = low.match(/\b(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?\b/)
   if (dmy) {
     const month = +dmy[2]
     if (month >= 1 && month <= 12) {
       let year = dmy[3] ? +dmy[3] : new Date().getFullYear()
       if (year < 100) year += 2000
-      const d = new Date(year, month - 1, +dmy[1])
+      const d = validDate(year, month, +dmy[1])
+      if (!d) return null
       return dmy[3] ? d : rollToNextYearIfPast(d)
     }
   }
@@ -79,7 +88,9 @@ function matchDate(low) {
   const m = low.match(/\b(\d{1,2})\.\s*([a-zæøå]+)(?:\s+(\d{4}))?\b/)
   if (m && MONTHS[m[2]] !== undefined) {
     const y = m[3] ? +m[3] : new Date().getFullYear()
-    return m[3] ? new Date(y, MONTHS[m[2]] - 1, +m[1]) : rollToNextYearIfPast(new Date(y, MONTHS[m[2]] - 1, +m[1]))
+    const d = validDate(y, MONTHS[m[2]], +m[1])
+    if (!d) return null
+    return m[3] ? d : rollToNextYearIfPast(d)
   }
   return null
 }
@@ -90,20 +101,25 @@ function matchDates(low) {
   let m
   while ((m = re.exec(low))) {
     if (m[1] && m[3]) {
-      out.push(rollToNextYearIfPast(new Date(new Date().getFullYear(), MONTHS[m[3]] - 1, +m[1])))
-      out.push(rollToNextYearIfPast(new Date(new Date().getFullYear(), MONTHS[m[3]] - 1, +m[2])))
+      const month = MONTHS[m[3]]
+      const year = new Date().getFullYear()
+      const first = month && validDate(year, month, +m[1])
+      const second = month && validDate(year, month, +m[2])
+      if (first) out.push(rollToNextYearIfPast(first))
+      if (second) out.push(rollToNextYearIfPast(second))
     } else if (m[4] && m[5]) {
       const y = m[6] ? (m[6].length === 2 ? 2000 + +m[6] : +m[6]) : new Date().getFullYear()
       if (+m[5] >= 1 && +m[5] <= 12) {
-        const d = new Date(y, +m[5] - 1, +m[4])
-        out.push(m[6] ? d : rollToNextYearIfPast(d))
+        const d = validDate(y, +m[5], +m[4])
+        if (d) out.push(m[6] ? d : rollToNextYearIfPast(d))
       }
     } else if (m[7] && m[8] && m[9]) {
-      out.push(new Date(+m[7], +m[8] - 1, +m[9]))
+      const d = validDate(+m[7], +m[8], +m[9])
+      if (d) out.push(d)
     } else if (m[10] && m[11] && MONTHS[m[11]] !== undefined) {
       const y = m[12] ? +m[12] : new Date().getFullYear()
-      const d = new Date(y, MONTHS[m[11]] - 1, +m[10])
-      out.push(m[12] ? d : rollToNextYearIfPast(d))
+      const d = validDate(y, MONTHS[m[11]], +m[10])
+      if (d) out.push(m[12] ? d : rollToNextYearIfPast(d))
     }
   }
   const seen = new Set()
@@ -189,7 +205,7 @@ function parseEntry(input, subjects) {
     if (!subject) return { ok: false, error: 'Fant ikke hvilket fag det gjelder. Skriv f.eks. «i forretningsjus».' }
     if (!dates.length) return { ok: false, error: 'Mangler frist. Skriv f.eks. «frist 1. oktober».' }
     const titleMatch = low.match(ASSIGNMENT_TITLE)
-    const title = titleMatch ? capitalize(titleMatch[1].trim()) : 'Gjøremål'
+    const title = titleMatch ? capitalize(titleMatch[1].trim()) : 'Arbeidskrav'
     return { ok: true, actions: dates.map((d) => ({ type: 'assignment', subject, title, date: d })) }
   }
 

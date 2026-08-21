@@ -6,15 +6,22 @@ function unfold(text) {
   }, [])
 }
 
-function icsDate(value, prop) {
+function icsText(value) {
+  return value.replace(/\\([nN,;\\])/g, (_, char) => char.toLowerCase() === 'n' ? '\n' : char)
+}
+
+function icsDateTime(value, prop) {
   const m = value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/)
-  if (!m) return null
+  if (!m) return { date: null, time: '' }
   const [, y, mo, d, h, mi, s, z] = m
-  if (prop.toUpperCase().includes('VALUE=DATE')) return `${y}-${mo}-${d}`
+  if (prop.toUpperCase().includes('VALUE=DATE')) return { date: `${y}-${mo}-${d}`, time: '' }
   const date = z
     ? new Date(Date.UTC(+y, +mo - 1, +d, +(h || 0), +(mi || 0), +(s || 0)))
     : new Date(+y, +mo - 1, +d, +(h || 0), +(mi || 0), +(s || 0))
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+  return {
+    date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+    time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`,
+  }
 }
 
 export function extractCode(title) {
@@ -25,8 +32,9 @@ export function extractCode(title) {
 export function guessKind(title) {
   const low = title.toLowerCase()
   if (/eksamen|exam|tentamen|prøve/.test(low)) return 'exam'
+  if (/pensum|les\s+kapittel/.test(low)) return 'reading'
+  if (/innlevering|arbeidskrav|oblig|oppgave|\btest\b/.test(low)) return 'assignment'
   if (/forelesning|seminar|øving|øvelse|lab|laboratorium|gruppe|colloquium/.test(low)) return 'lecture'
-  if (/innlevering|arbeidskrav|oblig|oppgave|test/.test(low)) return 'assignment'
   return 'lecture'
 }
 
@@ -40,7 +48,7 @@ export function parseIcs(text) {
       continue
     }
     if (upper.startsWith('END:VEVENT')) {
-      if (ev && ev.title && ev.date) events.push({ title: ev.title, date: ev.date, time: ev.time ?? '' })
+      if (ev && ev.title && ev.date) events.push({ title: ev.title, date: ev.date, time: ev.time ?? '', room: ev.room ?? '' })
       ev = null
       continue
     }
@@ -50,11 +58,12 @@ export function parseIcs(text) {
     const prop = line.slice(0, idx)
     const value = line.slice(idx + 1)
     const name = prop.split(';')[0].toUpperCase()
-    if (name === 'SUMMARY') ev.title = value.trim()
+    if (name === 'SUMMARY') ev.title = icsText(value.trim())
+    else if (name === 'LOCATION') ev.room = icsText(value.trim())
     else if (name === 'DTSTART') {
-      ev.date = icsDate(value, prop)
-      const t = value.match(/T(\d{2})(\d{2})/)
-      ev.time = t ? `${t[1]}:${t[2]}` : ''
+      const start = icsDateTime(value, prop)
+      ev.date = start.date
+      ev.time = start.time
     }
   }
   return events

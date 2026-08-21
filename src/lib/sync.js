@@ -1,19 +1,13 @@
 import { useEffect, useCallback, useRef, useState } from 'react'
 import { supabase, hasSupabase } from './supabase'
-import { load } from './store'
+import { load, normalizePlannerData } from './store'
 
 const unscopedKey = 'oliarev-study-planner-v2'
 const legacyUnscopedKey = 'oliarev-study-planner-v1'
 const cacheKey = (userId) => (hasSupabase && userId !== 'local' ? `${unscopedKey}-${userId}` : unscopedKey)
 const legacyCacheKey = (userId) => (hasSupabase && userId !== 'local' ? `${legacyUnscopedKey}-${userId}` : legacyUnscopedKey)
 
-function normalize(data) {
-  if (!data) return data
-  const exams = Array.isArray(data.exams) ? data.exams : []
-  const readings = (Array.isArray(data.readings) ? data.readings : []).map((r) => ({ chapters: [], ...r }))
-  if (exams === data.exams && readings === data.readings) return data
-  return { ...data, exams, readings }
-}
+const normalize = normalizePlannerData
 
 function localData(userId) {
   try {
@@ -56,23 +50,38 @@ export function useAuth() {
 export function useStore(user) {
   const userId = user?.id
   const [data, setData] = useState(() => (userId ? localData(userId) : null))
+  const [dataOwner, setDataOwner] = useState(() => (userId ?? null))
   const [ready, setReady] = useState(false)
+  const [syncStatus, setSyncStatus] = useState(hasSupabase && userId !== 'local' ? 'loading' : 'local')
   const saveTimer = useRef(null)
+  const pendingSave = useRef(null)
+  const remoteReady = useRef(false)
+  const storeGeneration = useRef(0)
   const lastWrite = useRef(0)
   const lastSynced = useRef(0)
 
   const saveRemoteDebounced = useCallback(
     (payload) => {
       clearTimeout(saveTimer.current)
-      saveTimer.current = setTimeout(async () => {
+      setSyncStatus('saving')
+      const generation = storeGeneration.current
+      let save
+      save = async () => {
+        if (pendingSave.current === save) pendingSave.current = null
         const ts = Date.now()
         lastWrite.current = ts
         if (!lastSynced.current) {
           const { error } = await supabase
             .from('user_data')
             .upsert({ user_id: userId, data: payload, updated_at: new Date(ts).toISOString() })
-          if (error) return console.error('Supabase-save:', error.message)
+          if (generation !== storeGeneration.current) return
+          if (error) {
+            console.error('Supabase-save:', error.message)
+            setSyncStatus('error')
+            return
+          }
           lastSynced.current = ts
+          setSyncStatus('saved')
           return
         }
         const { data: row, error } = await supabase
@@ -82,53 +91,93 @@ export function useStore(user) {
           .eq('updated_at', new Date(lastSynced.current).toISOString())
           .select('updated_at')
           .maybeSingle()
-        if (error) return console.error('Supabase-save:', error.message)
-        if (row) {
-          lastSynced.current = new Date(row.updated_at).getTime()
+        if (generation !== storeGeneration.current) return
+        if (error) {
+          console.error('Supabase-save:', error.message)
+          setSyncStatus('error')
           return
         }
+        if (row) {
+          lastSynced.current = new Date(row.updated_at).getTime()
+          setSyncStatus('saved')
+          return
+        }
+        setSyncStatus('conflict')
         console.warn('Konflikt: raden ble endret av en annen enhet, henter nyeste versjon')
         const { data: fresh } = await supabase
           .from('user_data')
           .select('data, updated_at')
           .eq('user_id', userId)
           .maybeSingle()
+        if (generation !== storeGeneration.current) return
         if (fresh?.data) {
           lastSynced.current = new Date(fresh.updated_at).getTime()
           setData(normalize(fresh.data))
+          setDataOwner(userId)
         } else {
           const { error: e2 } = await supabase
             .from('user_data')
             .insert({ user_id: userId, data: payload, updated_at: new Date(ts).toISOString() })
-          if (!e2) lastSynced.current = ts
+          if (generation !== storeGeneration.current) return
+          if (e2) setSyncStatus('error')
+          else {
+            lastSynced.current = ts
+            setSyncStatus('saved')
+          }
         }
-      }, 800)
+      }
+      pendingSave.current = save
+      saveTimer.current = setTimeout(save, 800)
     },
     [userId],
   )
 
   useEffect(() => {
+    storeGeneration.current++
+    lastWrite.current = 0
+    lastSynced.current = 0
     if (!userId) {
+      remoteReady.current = false
       setData(null)
+      setDataOwner(null)
       setReady(false)
+      setSyncStatus('loading')
       return
     }
     if (!hasSupabase || userId === 'local') {
-      setData((d) => d ?? load())
+      remoteReady.current = false
+      setData(load())
+      setDataOwner(userId)
       setReady(true)
+      setSyncStatus('local')
       return
     }
     let alive = true
+    remoteReady.current = false
+    setDataOwner(null)
     const fetchRemote = async () => {
       setReady(false)
-      const { data: row } = await supabase.from('user_data').select('data, updated_at').eq('user_id', userId).maybeSingle()
+      setSyncStatus('loading')
+      const { data: row, error } = await supabase.from('user_data').select('data, updated_at').eq('user_id', userId).maybeSingle()
       if (!alive) return
+      if (error) {
+        console.error('Supabase-load:', error.message)
+        setData(normalize(localData(userId)))
+        setDataOwner(userId)
+        setReady(true)
+        setSyncStatus('error')
+        return
+      }
+      remoteReady.current = true
       if (row?.data) {
         lastSynced.current = new Date(row.updated_at).getTime()
         setData(normalize(row.data))
+        setDataOwner(userId)
+        setSyncStatus('saved')
       } else {
-        const next = normalize(localData(userId) ?? load())
+        const next = normalize(localData(userId))
         setData(next)
+        setDataOwner(userId)
         saveRemoteDebounced(next)
       }
       setReady(true)
@@ -144,12 +193,17 @@ export function useStore(user) {
           if (new Date(payload.new.updated_at).getTime() <= lastWrite.current) return
           lastSynced.current = new Date(payload.new.updated_at).getTime()
           setData(normalize(payload.new.data))
+          setDataOwner(userId)
+          setSyncStatus('saved')
         },
       )
       .subscribe()
     return () => {
       alive = false
       clearTimeout(saveTimer.current)
+      const save = pendingSave.current
+      pendingSave.current = null
+      save?.()
       sub.unsubscribe()
     }
   }, [userId, saveRemoteDebounced])
@@ -157,15 +211,15 @@ export function useStore(user) {
   const update = useCallback(
     (fn) => {
       setData((prev) => {
-        if (!prev) return prev
+        if (!prev || dataOwner !== userId) return prev
         const next = normalize(fn(prev))
         localStorage.setItem(cacheKey(userId), JSON.stringify(next))
-        if (hasSupabase) saveRemoteDebounced(next)
+        if (hasSupabase && userId !== 'local' && remoteReady.current) saveRemoteDebounced(next)
         return next
       })
     },
-    [userId, saveRemoteDebounced],
+    [dataOwner, userId, saveRemoteDebounced],
   )
 
-  return { data, update, ready }
+  return { data, update, ready: ready && dataOwner === userId, syncStatus }
 }

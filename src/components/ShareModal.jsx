@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react'
 import { Modal } from './Modals'
 import { supabase } from '../lib/supabase'
 
-const SHARE_BASE = 'https://studieplanlegger.vercel.app/?del='
-
 function generateToken() {
   const bytes = new Uint8Array(24)
   crypto.getRandomValues(bytes)
@@ -42,7 +40,7 @@ export default function ShareModal({ subject, userId, onClose }) {
     }
   }, [subject.id, userId])
 
-  const link = token ? `${SHARE_BASE}${token}` : ''
+  const link = token ? `${window.location.origin}/?del=${token}` : ''
 
   const copy = async () => {
     try {
@@ -50,7 +48,7 @@ export default function ShareModal({ subject, userId, onClose }) {
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      /* clipboard ikke tilgjengelig – brukeren kan markere lenken manuelt */
+      /* clipboard ikke tilgjengelig - brukeren kan markere lenken manuelt */
     }
   }
 

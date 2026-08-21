@@ -35,7 +35,7 @@ export default function SmartInput({ subjects, onApply }) {
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="Skriv naturlig – f.eks. «arbeidskrav 1 i forretningsjus, frist 1. oktober», «eksamen i bedøk 1. november og 3. november» eller «pensum kapittel 3 i forretningsjus». Skill flere med komma."
+          placeholder="Skriv naturlig - f.eks. «arbeidskrav 1 i forretningsjus, frist 1. oktober», «eksamen i bedøk 1. november og 3. november» eller «pensum kapittel 3 i forretningsjus». Skill flere med komma."
           className={inputCls}
           aria-label="Generell input"
         />
@@ -94,7 +94,7 @@ function Preview({ action }) {
     return (
       <span>
         Forelesning i <b>{action.subject.short}</b> {fmtShort(action.date)} kl. {action.time}
-        {action.topic ? ` – ${action.topic}` : ''}
+        {action.topic ? ` - ${action.topic}` : ''}
       </span>
     )
   }
@@ -102,7 +102,7 @@ function Preview({ action }) {
     <span>
       Kapittel <b>{action.label}</b>
       {action.subject ? ` i ${action.subject.short}` : ''}
-      {action.date ? ` (${fmtShort(action.date)})` : ''} – legges til nærmeste forelesning
+      {action.date ? ` (${fmtShort(action.date)})` : ''} - legges til nærmeste forelesning
     </span>
   )
 }

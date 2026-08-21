@@ -1,5 +1,5 @@
 export const DEFAULT_WEEKS = [
-  ...Array.from({ length: 52 - 34 + 1 }, (_, i) => 34 + i),
+  ...Array.from({ length: 53 - 34 + 1 }, (_, i) => 34 + i),
   ...Array.from({ length: 24 }, (_, i) => i + 1),
 ]
 

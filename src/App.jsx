@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { uid, pickSubjectColor } from './lib/store'
 import { fmtShort, iso, isoWeek } from './lib/date'
 import { useAuth, useStore } from './lib/sync'
@@ -10,21 +10,29 @@ import Pensum from './components/Pensum'
 import Gjøremål from './components/Gjøremål'
 import Eksamener from './components/Eksamener'
 import SmartInput from './components/SmartInput'
-import ImportModal from './components/ImportModal'
 import PasswordForm from './components/PasswordForm'
 import SearchModal from './components/SearchModal'
 import ShareModal from './components/ShareModal'
 import DeltFag from './components/DeltFag'
 import { Modal, SubjectForm, LectureForm, AssignmentForm, ExamForm, ReadingForm } from './components/Modals'
 import { DeadlineStrip, SubjectFilter } from './components/ui'
+import { restoreChapter, restoreItem, restoreSubject } from './lib/undo'
+import UpcomingAgenda from './components/UpcomingAgenda'
+import ReviewPlan from './components/ReviewPlan'
+import FocusMode from './components/FocusMode'
+import Changelog from './components/Changelog'
+import { advanceReview, applyWeekTemplate, createWeekTemplate, deferReview, findLectureConflictIds, makeReview } from './lib/plannerFeatures'
 
 const TABS = [
   { id: 'overview', label: 'Oversikt' },
   { id: 'timeplan', label: 'Timeplan' },
   { id: 'reading', label: 'Pensum' },
-  { id: 'tasks', label: 'Gjøremål' },
+  { id: 'tasks', label: 'Arbeidskrav' },
   { id: 'exams', label: 'Eksamener' },
+  { id: 'ai', label: 'AI' },
 ]
+const ImportModal = lazy(() => import('./components/ImportModal'))
+const AiTools = lazy(() => import('./components/AiTools'))
 
 function addMinutes(time, mins) {
   const [h, m] = time.split(':').map(Number)
@@ -50,7 +58,7 @@ function findTargetLecture(lectures, subject, date) {
 
 export default function App() {
   const { user, status: authStatus } = useAuth()
-  const { data, update, ready } = useStore(user ?? { id: 'local' })
+  const { data, update, ready, syncStatus } = useStore(user ?? { id: 'local' })
   const [tab, setTab] = useState('timeplan')
   const [modal, setModal] = useState(null)
   const [editing, setEditing] = useState(null)
@@ -60,6 +68,8 @@ export default function App() {
   const [searchOpen, setSearchOpen] = useState(false)
   const [timeplanWeek, setTimeplanWeek] = useState(null)
   const [shareSubject, setShareSubject] = useState(null)
+  const [deleteAllStep, setDeleteAllStep] = useState(1)
+  const [focusTarget, setFocusTarget] = useState(null)
   const [sharedToken] = useState(() => new URLSearchParams(window.location.search).get('del'))
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('planner-theme')
@@ -115,6 +125,15 @@ export default function App() {
     setModal(m)
     setEditing(null)
   }
+
+  const deleteAll = () => {
+    update(() => ({ subjects: [], lectures: [], assignments: [], exams: [], readings: [], reviews: [], weekTemplates: [] }))
+    setUndo(null)
+    setFilterSubjectId(null)
+    setTimeplanWeek(null)
+    setTab('overview')
+    closeModal()
+  }
   const openEdit = (type, item) => {
     setEditing(item)
     setModal(type)
@@ -122,14 +141,18 @@ export default function App() {
 
   const bySubject = (items) => (filterSubjectId ? items.filter((i) => i.subjectId === filterSubjectId) : items)
 
-  const removeWithUndo = (label, apply) => {
-    setUndo({ label, snapshot: data })
+  const removeWithUndo = (label, apply, restore) => {
+    setUndo({ label, restore, userId: user?.id ?? 'local' })
     update(apply)
   }
 
   const onUndo = () => {
     if (!undo) return
-    update(() => undo.snapshot)
+    if (undo.userId !== (user?.id ?? 'local')) {
+      setUndo(null)
+      return
+    }
+    update(undo.restore)
     setUndo(null)
   }
 
@@ -154,6 +177,10 @@ export default function App() {
       ...d,
       readings: [...d.readings, { id: uid(), ...r }],
     })),
+    addReview: (review) => update((d) => ({ ...d, reviews: [...d.reviews, makeReview(review, new Date(), uid())] })),
+    completeReview: (id) => update((d) => ({ ...d, reviews: d.reviews.map((review) => review.id === id ? advanceReview(review) : review) })),
+    deferReview: (id) => update((d) => ({ ...d, reviews: d.reviews.map((review) => review.id === id ? deferReview(review) : review) })),
+    removeReview: (id) => update((d) => ({ ...d, reviews: d.reviews.filter((review) => review.id !== id) })),
     addChapter: (lectureId, text) => update((d) => ({
       ...d,
       lectures: d.lectures.map((l) =>
@@ -171,13 +198,15 @@ export default function App() {
       const assignments = [...d.assignments]
       const exams = [...d.exams]
       const lectures = [...d.lectures]
+      const readings = [...d.readings]
       const newSubjects = new Map()
       const resolveSubject = (r) => {
         if (r.subjectValue !== 'new') return r.subjectValue
         const name = (r.newName || '').trim() || 'Ukjent fag'
-        if (newSubjects.has(name)) return newSubjects.get(name)
+        const key = name.toLowerCase()
+        if (newSubjects.has(key)) return newSubjects.get(key)
         const id = uid()
-        newSubjects.set(name, id)
+        newSubjects.set(key, id)
         subjects.push({ id, code: name, name, short: name, color: pickSubjectColor(subjects.length), levelOverride: null })
         return id
       }
@@ -185,15 +214,20 @@ export default function App() {
         if (!r.include || !r.title.trim() || !r.date) continue
         const subjectId = resolveSubject(r)
         if (r.kind === 'exam') {
-          const exam = { id: uid(), subjectId, title: r.title.trim(), date: r.date, time: '' }
+          const exam = { id: uid(), subjectId, title: r.title.trim(), date: r.date, time: r.time || '' }
           if (!exams.some((x) => x.subjectId === subjectId && x.title === exam.title && x.date === exam.date)) {
             exams.push(exam)
           }
         } else if (r.kind === 'lecture') {
           const start = r.time || '10:00'
-          const lecture = { id: uid(), subjectId, date: r.date, start, end: addMinutes(start, 105), room: '', lecturer: '', topic: r.title.trim(), chapters: [], done: false }
-          if (!lectures.some((x) => x.subjectId === subjectId && x.date === lecture.date && x.topic === lecture.topic)) {
+          const lecture = { id: uid(), subjectId, date: r.date, start, end: addMinutes(start, 105), room: (r.room || '').trim(), lecturer: '', topic: r.title.trim(), chapters: [], done: false }
+          if (!lectures.some((x) => x.subjectId === subjectId && x.date === lecture.date && x.start === lecture.start && x.topic === lecture.topic)) {
             lectures.push(lecture)
+          }
+        } else if (r.kind === 'reading') {
+          const reading = { id: uid(), subjectId, title: r.title.trim(), week: isoWeek(new Date(`${r.date}T00:00:00`)), done: false, chapters: [] }
+          if (!readings.some((x) => x.subjectId === subjectId && x.title === reading.title && x.week === reading.week)) {
+            readings.push(reading)
           }
         } else {
           const item = { id: uid(), subjectId, title: r.title.trim(), deadline: r.date, status: 'not_started' }
@@ -202,7 +236,7 @@ export default function App() {
           }
         }
       }
-      return { ...d, subjects, assignments, exams, lectures }
+      return { ...d, subjects, assignments, exams, lectures, readings }
     }),
     toggleChapter: (lectureId, chapterId) => update((d) => ({
       ...d,
@@ -223,12 +257,13 @@ export default function App() {
     removeChapter: (lectureId, chapterId) => {
       const l = data.lectures.find((x) => x.id === lectureId)
       const c = l?.chapters.find((x) => x.id === chapterId)
+      const index = l?.chapters.findIndex((x) => x.id === chapterId) ?? 0
       removeWithUndo(`Fjernet «${c?.text ?? 'kapittel'}»`, (d) => ({
         ...d,
         lectures: d.lectures.map((x) =>
           x.id === lectureId ? { ...x, chapters: x.chapters.filter((c2) => c2.id !== chapterId) } : x,
         ),
-      }))
+      }), (d) => restoreChapter(d, lectureId, c, index))
     },
     toggleLecture: (lectureId) => update((d) => ({
       ...d,
@@ -242,34 +277,46 @@ export default function App() {
       ...d,
       subjects: d.subjects.map((s) => (s.id === subjectId ? { ...s, levelOverride: level } : s)),
     })),
-    removeSubject: (id) => update((d) => ({
-      ...d,
-      subjects: d.subjects.filter((s) => s.id !== id),
-      lectures: d.lectures.filter((l) => l.subjectId !== id),
-      assignments: d.assignments.filter((a) => a.subjectId !== id),
-      exams: d.exams.filter((e) => e.subjectId !== id),
-      readings: d.readings.filter((r) => r.subjectId !== id),
-    })),
+    removeSubject: (id) => {
+      const subject = data.subjects.find((s) => s.id === id)
+      const removed = {
+        subject,
+        index: data.subjects.findIndex((s) => s.id === id),
+        items: Object.fromEntries(['lectures', 'assignments', 'exams', 'readings', 'reviews'].map((key) => [key, data[key].filter((x) => x.subjectId === id)])),
+      }
+      removeWithUndo(`Fjernet «${subject?.short ?? 'fag'}»`, (d) => ({
+        ...d,
+        subjects: d.subjects.filter((s) => s.id !== id),
+        lectures: d.lectures.filter((l) => l.subjectId !== id),
+        assignments: d.assignments.filter((a) => a.subjectId !== id),
+        exams: d.exams.filter((e) => e.subjectId !== id),
+        readings: d.readings.filter((r) => r.subjectId !== id),
+        reviews: d.reviews.filter((r) => r.subjectId !== id),
+      }), (d) => restoreSubject(d, removed))
+    },
     removeLecture: (id) => {
       const l = data.lectures.find((x) => x.id === id)
+      const index = data.lectures.findIndex((x) => x.id === id)
       removeWithUndo(`Fjernet forelesning${l ? ` ${fmtShort(new Date(l.date))}` : ''}`, (d) => ({
         ...d,
         lectures: d.lectures.filter((x) => x.id !== id),
-      }))
+      }), (d) => restoreItem(d, 'lectures', l, index))
     },
     removeAssignment: (id) => {
       const a = data.assignments.find((x) => x.id === id)
+      const index = data.assignments.findIndex((x) => x.id === id)
       removeWithUndo(`Fjernet «${a?.title ?? 'arbeidskrav'}»`, (d) => ({
         ...d,
         assignments: d.assignments.filter((x) => x.id !== id),
-      }))
+      }), (d) => restoreItem(d, 'assignments', a, index))
     },
     removeExam: (id) => {
       const e = data.exams.find((x) => x.id === id)
+      const index = data.exams.findIndex((x) => x.id === id)
       removeWithUndo(`Fjernet «${e?.title ?? 'eksamen'}»`, (d) => ({
         ...d,
         exams: d.exams.filter((x) => x.id !== id),
-      }))
+      }), (d) => restoreItem(d, 'exams', e, index))
     },
     toggleReading: (id) => update((d) => ({
       ...d,
@@ -285,10 +332,11 @@ export default function App() {
     })),
     removeReading: (id) => {
       const r = data.readings.find((x) => x.id === id)
+      const index = data.readings.findIndex((x) => x.id === id)
       removeWithUndo(`Fjernet «${r?.title ?? 'pensum'}»`, (d) => ({
         ...d,
         readings: d.readings.filter((x) => x.id !== id),
-      }))
+      }), (d) => restoreItem(d, 'readings', r, index))
     },
     updateSubject: (s) => update((d) => ({
       ...d,
@@ -373,15 +421,62 @@ export default function App() {
     }
   }
 
+  const saveTemplate = (name) => {
+    if (timeplanWeek == null) return { ok: false, message: 'Kunne ikke lagre. Velg en bestemt uke først.' }
+    try {
+      const source = data.lectures.filter((lecture) => isoWeek(new Date(`${lecture.date}T00:00:00`)) === timeplanWeek)
+      const template = createWeekTemplate(name, source, new Date(), uid())
+      update((d) => ({ ...d, weekTemplates: [...d.weekTemplates, template] }))
+      return { ok: true, message: 'Ukemalen er lagret.' }
+    } catch (error) { return { ok: false, message: `Kunne ikke lagre. ${error.message}` } }
+  }
+  const applyTemplate = (template) => {
+    try {
+      const validSubjectIds = new Set(data.subjects.map((subject) => subject.id))
+      if (!(template.lectures ?? []).some((lecture) => validSubjectIds.has(lecture.subjectId))) {
+        return { ok: false, message: 'Kunne ikke bruke malen. Malen inneholder ingen forelesninger i gjeldende fag.' }
+      }
+      const lectures = applyWeekTemplate(template, timeplanWeek, data.lectures, uid, new Date(), validSubjectIds)
+      if (lectures.length === 0) return { ok: false, message: 'Ingen nye forelesninger ble lagt til. De finnes allerede i denne uken.' }
+      update((d) => ({ ...d, lectures: [...d.lectures, ...lectures] }))
+      return { ok: true, message: `${lectures.length} forelesninger ble lagt til.` }
+    } catch (error) { return { ok: false, message: `Kunne ikke bruke malen. ${error.message}` } }
+  }
+  const focusItems = [
+    ...data.lectures.filter((item) => !item.done).map((item) => ({ ...item, key: `lecture-${item.id}`, type: 'lecture', title: item.topic || 'Forelesning' })),
+    ...data.readings.filter((item) => !item.done).map((item) => ({ ...item, key: `reading-${item.id}`, type: 'reading' })),
+    ...data.assignments.filter((item) => item.status !== 'done').map((item) => ({ ...item, key: `assignment-${item.id}`, type: 'assignment' })),
+    ...data.reviews.map((item) => ({ ...item, key: `review-${item.id}`, type: 'review' })),
+    ...data.exams.map((item) => ({ ...item, key: `exam-${item.id}`, type: 'exam' })),
+  ]
+  const finishFocusItem = (item) => {
+    if (item.type === 'lecture') actions.toggleLecture(item.id)
+    if (item.type === 'reading') actions.toggleReading(item.id)
+    if (item.type === 'assignment') actions.setAssignmentStatus(item.id, 'done')
+    if (item.type === 'review') actions.completeReview(item.id)
+  }
+  const conflictIds = findLectureConflictIds(data.lectures)
+  const conflictCount = conflictIds.size
+
   return (
     <div className="min-h-screen">
-      <header className="relative mx-auto max-w-5xl px-4 pb-6 pt-12">
-        <div className="absolute right-4 top-4 flex items-center gap-2">
+      <header className="mx-auto max-w-5xl px-4 pb-6 pt-5 sm:pt-8">
+        <div className="mb-6 flex flex-wrap items-center justify-end gap-x-1 gap-y-2 text-right">
+          <span role="status" aria-live="polite" className={`text-xs ${syncStatus === 'error' ? 'text-danger' : 'text-muted'}`}>
+            {{ local: 'Lagret lokalt', loading: 'Kobler til…', saving: 'Lagrer…', saved: 'Synkronisert', conflict: 'Oppdatert fra annen enhet', error: 'Synkfeil' }[syncStatus]}
+          </span>
+          <button
+            type="button"
+            onClick={() => openModal('changelog')}
+            className="min-h-10 rounded-[10px] px-2 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
+          >
+            Changelog
+          </button>
           <button
             onClick={() => setSearchOpen(true)}
             aria-label="Søk (Ctrl+K)"
             title="Søk (Ctrl+K)"
-            className="rounded p-1 text-ink hover:text-primary"
+            className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-[10px] text-ink transition-colors hover:bg-surface hover:text-primary"
           >
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
@@ -390,7 +485,7 @@ export default function App() {
           <button
             onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
             aria-label={theme === 'dark' ? 'Bytt til lys modus' : 'Bytt til mørk modus'}
-            className="rounded p-1 text-ink hover:text-primary"
+            className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-[10px] text-ink transition-colors hover:bg-surface hover:text-primary"
           >
             {theme === 'dark' ? (
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
@@ -406,7 +501,7 @@ export default function App() {
           {hasSupabase && !user && (
             <button
               onClick={() => setShowLogin(true)}
-              className="rounded p-1 text-sm text-muted hover:text-ink"
+              className="min-h-10 rounded-[10px] px-2 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
             >
               Logg inn
             </button>
@@ -415,31 +510,31 @@ export default function App() {
             <>
               <button
                 onClick={() => openModal('password')}
-                className="rounded p-1 text-sm text-muted hover:text-ink"
+                className="min-h-10 rounded-[10px] px-2 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
               >
                 Endre passord
               </button>
               <button
                 onClick={() => supabase.auth.signOut()}
-                className="rounded p-1 text-sm text-muted hover:text-ink"
+                className="min-h-10 rounded-[10px] px-2 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
               >
                 Logg ut
               </button>
             </>
           )}
         </div>
-        <h1 className="font-display text-4xl font-bold tracking-tight">Studieplanlegger</h1>
-        <p className="mt-1 text-sm text-muted">Timeplan, pensum, arbeidskrav og eksamener – uke for uke.</p>
+        <h1 className="font-display text-3xl font-bold tracking-[-.03em] sm:text-4xl">Studieplanlegger</h1>
+        <p className="mt-1 text-sm text-muted">Timeplan, pensum, arbeidskrav og eksamener - uke for uke.</p>
 
         <SmartInput subjects={data.subjects} onApply={applySmartAction} />
 
-        <nav className="mt-6 flex gap-1 overflow-x-auto border-b border-line" aria-label="Sider">
+        <nav className="tab-strip mt-6 flex gap-1 overflow-x-auto border-b border-line pb-px" aria-label="Sider">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors ${
-                tab === t.id ? 'border-primary text-ink' : 'border-transparent text-muted hover:text-ink'
+              className={`-mb-px min-h-10 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold transition-colors ${
+                tab === t.id ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'
               }`}
             >
               {t.label}
@@ -447,10 +542,11 @@ export default function App() {
           ))}
         </nav>
 
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="app-toolbar mt-5 flex flex-wrap gap-2">
           <button onClick={() => openModal('import')} className="btn-primary">Importer</button>
+          <button onClick={() => setFocusTarget({})} className="btn-ghost">Fokus</button>
         </div>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="app-toolbar mt-2 flex flex-wrap gap-2">
           <button onClick={() => openModal('subject')} className="btn-ghost">Nytt fag</button>
           <button onClick={() => openModal('lecture')} className="btn-ghost">Ny forelesning</button>
           <button onClick={() => openModal('reading')} className="btn-ghost">Nytt pensum</button>
@@ -462,10 +558,23 @@ export default function App() {
       <main className="mx-auto max-w-5xl px-4 pb-20">
         {tab === 'overview' && (
           <>
+            <UpcomingAgenda
+              lectures={data.lectures}
+              readings={data.readings}
+              assignments={data.assignments}
+              exams={data.exams}
+              reviews={data.reviews}
+              subjects={data.subjects}
+              conflictCount={conflictCount}
+              onFocus={setFocusTarget}
+            />
+            <ReviewPlan reviews={data.reviews} subjects={data.subjects} onAdd={actions.addReview} onComplete={actions.completeReview} onDefer={actions.deferReview} onRemove={actions.removeReview} />
             <SubjectPanel
               subjects={data.subjects}
               lectures={data.lectures}
+              readings={data.readings}
               assignments={data.assignments}
+              exams={data.exams}
               onSetLevel={actions.setLevel}
               onRemoveSubject={actions.removeSubject}
               onEditSubject={(s) => openEdit('subject', s)}
@@ -494,6 +603,11 @@ export default function App() {
               onRemoveChapter={actions.removeChapter}
               onRemoveLecture={actions.removeLecture}
               onEditLecture={(l) => openEdit('lecture', l)}
+              weekTemplates={data.weekTemplates}
+              onSaveTemplate={saveTemplate}
+              onApplyTemplate={applyTemplate}
+              onRemoveTemplate={(id) => update((d) => ({ ...d, weekTemplates: d.weekTemplates.filter((template) => template.id !== id) }))}
+              conflictIds={conflictIds}
             />
           </>
         )}
@@ -508,7 +622,6 @@ export default function App() {
               onToggleReadingChapter={actions.toggleReadingChapter}
               onRemoveReading={actions.removeReading}
               onEditReading={(r) => openEdit('reading', r)}
-              onAdd={() => openModal('reading')}
             />
           </>
         )}
@@ -532,12 +645,34 @@ export default function App() {
             <Eksamener
               exams={bySubject(data.exams)}
               subjects={data.subjects}
+              data={data}
               onRemoveExam={actions.removeExam}
               onEditExam={(e) => openEdit('exam', e)}
             />
           </>
         )}
+
+        {tab === 'ai' && (
+          <Suspense fallback={<p role="status" className="mt-8 text-sm text-muted">Laster AI-verktøy…</p>}>
+            <AiTools data={data} enabled={Boolean(hasSupabase && user && user.id !== 'local')} onAddReview={actions.addReview} />
+          </Suspense>
+        )}
       </main>
+
+      <footer className="mx-auto max-w-5xl px-4 pb-10">
+        <div className="flex justify-end border-t border-line pt-6">
+          <button
+            onClick={() => {
+              setDeleteAllStep(1)
+              openModal('deleteAll')
+            }}
+            className="btn-danger"
+            disabled={!data.subjects.length && !data.lectures.length && !data.readings.length && !data.assignments.length && !data.exams.length && !data.reviews.length && !data.weekTemplates.length}
+          >
+            Slett alt
+          </button>
+        </div>
+      </footer>
 
       {modal === 'subject' && (
         <Modal title={editing ? 'Rediger fag' : 'Nytt fag'} onClose={closeModal}>
@@ -565,18 +700,40 @@ export default function App() {
         </Modal>
       )}
       {modal === 'import' && (
-        <ImportModal
-          subjects={data.subjects}
-          data={data}
-          onImportPdf={actions.importLectures}
-          onImportIcs={actions.icsImport}
-          onImportBackup={(d) => removeWithUndo('Importerte sikkerhetskopi', () => d)}
-          onClose={closeModal}
-        />
+        <Suspense fallback={<div role="status" className="fixed inset-0 z-50 grid place-items-center bg-paper/70 text-sm text-muted">Laster import…</div>}>
+          <ImportModal
+            subjects={data.subjects}
+            data={data}
+            onImportPdf={actions.importLectures}
+            onImportIcs={actions.icsImport}
+            onImportBackup={(d) => update(() => d)}
+            onClose={closeModal}
+          />
+        </Suspense>
       )}
       {modal === 'password' && (
         <Modal title="Endre passord" onClose={closeModal}>
           <PasswordForm onClose={closeModal} />
+        </Modal>
+      )}
+      {modal === 'changelog' && (
+        <Modal title="Changelog" onClose={closeModal}>
+          <Changelog />
+        </Modal>
+      )}
+      {modal === 'deleteAll' && (
+        <Modal title={deleteAllStep === 1 ? 'Slett alt innhold?' : 'Bekreft permanent sletting'} onClose={closeModal}>
+          <p className="text-sm text-ink">
+            {deleteAllStep === 1
+              ? 'Vil du fortsette? Alle fag, forelesninger, pensum, arbeidskrav og eksamener blir valgt for sletting.'
+              : 'Dette kan ikke angres. Er du helt sikker på at alt innhold skal slettes permanent?'}
+          </p>
+          <div className="mt-4 flex justify-end gap-2">
+            <button type="button" onClick={closeModal} className="btn-ghost">Avbryt</button>
+            <button type="button" onClick={() => deleteAllStep === 1 ? setDeleteAllStep(2) : deleteAll()} className="btn-danger">
+              {deleteAllStep === 1 ? 'Ja, fortsett' : 'Ja, slett alt'}
+            </button>
+          </div>
         </Modal>
       )}
 
@@ -588,7 +745,9 @@ export default function App() {
         <ShareModal subject={shareSubject} userId={user.id} onClose={() => setShareSubject(null)} />
       )}
 
-      {undo && (
+      {focusTarget !== null && <FocusMode items={focusItems} initialTarget={focusTarget?.key} onClose={() => setFocusTarget(null)} onComplete={finishFocusItem} />}
+
+      {undo && undo.userId === (user?.id ?? 'local') && (
         <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm shadow-lg">
           <span className="text-ink">{undo.label}</span>
           <button onClick={onUndo} className="font-medium text-primary hover:underline">

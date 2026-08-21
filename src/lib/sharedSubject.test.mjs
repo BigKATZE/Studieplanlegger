@@ -7,7 +7,7 @@ const data = {
     { id: 's2', code: 'BØK3430', name: 'Bedriftsøkonomi', short: 'Bedøk', color: '#222222' },
   ],
   lectures: [
-    { id: 'l1', subjectId: 's1', date: '2026-08-17', start: '10:00', end: '11:45', room: 'A-201', topic: 'Avtaler', chapters: [{ id: 'c1', text: 'Kapittel 3' }] },
+    { id: 'l1', subjectId: 's1', date: '2026-08-17', start: '10:00', end: '11:45', room: 'A-201', topic: 'Avtaler', done: true, chapters: [{ id: 'c1', text: 'Kapittel 3', done: true }] },
     { id: 'l2', subjectId: 's2', date: '2026-08-18', start: '12:00', end: '13:45', room: 'B-101', topic: 'Verdsettelse', chapters: [] },
     { id: 'l3', subjectId: 's1', date: '2026-08-19', start: '10:00', end: '11:45', room: 'A-201', topic: 'Forhandlinger', chapters: [] },
   ],
@@ -44,6 +44,7 @@ assert.ok(!serialized.includes('skoleeksamen'), 'ingen eksamener')
 assert.ok(!serialized.includes('a1') && !serialized.includes('a2'), 'ingen arbeidskrav-id-er')
 assert.ok(!serialized.includes('e1') && !serialized.includes('e2'), 'ingen eksamens-id-er')
 assert.ok(!serialized.includes('subjectId'), 'fjerner intern knytning')
+assert.ok(!serialized.includes('"done"'), 'fjerner privat studieprogresjon')
 
 assert.equal(extractSharedSubject(data, 'finnes-ikke'), null, 'ukjent fag gir null')
 assert.equal(extractSharedSubject({ subjects: [] }, 's1'), null, 'tom subjects gir null')

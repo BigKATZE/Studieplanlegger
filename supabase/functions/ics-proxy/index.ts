@@ -26,6 +26,7 @@
 
 const MAX_BYTES = 2 * 1024 * 1024 // 2 MB – matcher grensen i frontend
 const FETCH_TIMEOUT_MS = 10_000
+const MAX_REDIRECTS = 5
 
 function corsHeaders(origin: string | null) {
   return {
@@ -78,6 +79,47 @@ async function isBlockedTarget(hostname: string): Promise<boolean> {
   }
 }
 
+async function fetchValidated(start: URL, signal: AbortSignal): Promise<Response> {
+  let url = start
+  for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
+    if (await isBlockedTarget(url.hostname)) throw new Error('blocked-target')
+    const response = await fetch(url, { redirect: 'manual', signal })
+    if (![301, 302, 303, 307, 308].includes(response.status)) return response
+    const location = response.headers.get('location')
+    if (!location || redirects === MAX_REDIRECTS) throw new Error('invalid-redirect')
+    url = new URL(location, url)
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error('invalid-redirect')
+  }
+  throw new Error('invalid-redirect')
+}
+
+async function readLimited(response: Response): Promise<Uint8Array> {
+  const contentLength = Number(response.headers.get('content-length'))
+  if (contentLength > MAX_BYTES) throw new Error('too-large')
+  if (!response.body) return new Uint8Array()
+
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > MAX_BYTES) {
+      await reader.cancel()
+      throw new Error('too-large')
+    }
+    chunks.push(value)
+  }
+  const body = new Uint8Array(size)
+  let offset = 0
+  for (const chunk of chunks) {
+    body.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return body
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get('origin')
 
@@ -100,27 +142,24 @@ Deno.serve(async (req) => {
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
     return jsonError('Kun http/https-URL-er er støttet.', 400, origin)
   }
-  if (await isBlockedTarget(parsed.hostname)) {
-    return jsonError('Denne adressen kan ikke hentes.', 400, origin)
-  }
-
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   try {
-    const res = await fetch(parsed, { redirect: 'follow', signal: controller.signal })
-    clearTimeout(timeout)
+    const res = await fetchValidated(parsed, controller.signal)
     if (!res.ok) return jsonError(`Feed svarte ${res.status}.`, 502, origin)
 
-    const buf = await res.arrayBuffer()
-    if (buf.byteLength > MAX_BYTES) return jsonError('Feeden er for stor (over 2 MB).', 413, origin)
+    const buf = await readLimited(res)
 
     return new Response(buf, {
       status: 200,
       headers: { ...corsHeaders(origin), 'Content-Type': 'text/calendar; charset=utf-8' },
     })
   } catch (err) {
-    clearTimeout(timeout)
     const aborted = err instanceof Error && err.name === 'AbortError'
+    if (err instanceof Error && err.message === 'too-large') return jsonError('Feeden er for stor (over 2 MB).', 413, origin)
+    if (err instanceof Error && err.message === 'blocked-target') return jsonError('Denne adressen kan ikke hentes.', 400, origin)
     return jsonError(aborted ? 'Tidsavbrudd ved henting av feed.' : 'Kunne ikke hente feeden.', 502, origin)
+  } finally {
+    clearTimeout(timeout)
   }
 })

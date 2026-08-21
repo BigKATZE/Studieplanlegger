@@ -5,6 +5,11 @@ import { parseTimeEdit, detectCourseCode } from './parseTimeEdit'
 GlobalWorkerOptions.workerSrc = workerUrl
 
 export async function extractLecturesFromPdf(file) {
+  const text = await extractTextFromPdf(file)
+  return { lectures: parseTimeEdit(text), courseCode: detectCourseCode(text), text }
+}
+
+export async function extractTextFromPdf(file) {
   const data = await file.arrayBuffer()
   const doc = await getDocument({ data }).promise
   let text = ''
@@ -27,5 +32,5 @@ export async function extractLecturesFromPdf(file) {
     }
     text += lines.map((l) => l.parts.join(' ')).join('\n') + '\n'
   }
-  return { lectures: parseTimeEdit(text), courseCode: detectCourseCode(text), text }
+  return text
 }

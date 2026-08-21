@@ -22,7 +22,7 @@ export function DateField({ value, onChange, className = '', required, ariaLabel
     else if (digits.length > 2) formatted = `${digits.slice(0, 2)}/${digits.slice(2)}`
     setText(formatted)
     const nextIso = displayDateToIso(formatted)
-    if (nextIso) onChange(nextIso)
+    onChange(nextIso ?? '')
   }
 
   return (
@@ -37,6 +37,8 @@ export function DateField({ value, onChange, className = '', required, ariaLabel
       onBlur={() => setFocused(false)}
       className={`${fieldInputCls} ${className}`}
       required={required}
+      pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}"
+      aria-invalid={text !== '' && !displayDateToIso(text)}
       aria-label={ariaLabel}
     />
   )
@@ -58,7 +60,7 @@ export function TimeField({ value, onChange, className = '', required, ariaLabel
     let formatted = digits
     if (digits.length > 2) formatted = `${digits.slice(0, 2)}:${digits.slice(2)}`
     setText(formatted)
-    if (isValidTime(formatted)) onChange(formatted)
+    onChange(isValidTime(formatted) ? formatted : '')
   }
 
   return (
@@ -73,6 +75,8 @@ export function TimeField({ value, onChange, className = '', required, ariaLabel
       onBlur={() => setFocused(false)}
       className={`${fieldInputCls} ${className}`}
       required={required}
+      pattern="[0-9]{2}:[0-9]{2}"
+      aria-invalid={text !== '' && !isValidTime(text)}
       aria-label={ariaLabel}
     />
   )
@@ -169,7 +173,7 @@ export function Select({ value, onChange, options, className = '', ariaLabel, pl
 export function SubjectChip({ subject }) {
   if (!subject) return null
   return (
-    <span className="chip" style={{ backgroundColor: subject.color + '1a', color: subject.color }}>
+    <span className="chip subject-chip" style={{ '--subject-color': subject.color || '#146c54' }}>
       {subject.short || subject.name}
     </span>
   )

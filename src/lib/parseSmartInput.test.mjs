@@ -2,6 +2,7 @@ import assert from 'node:assert'
 import { parseSmartInput } from './parseSmartInput.js'
 
 const subjects = [
+  { id: 'blank', code: '', name: 'Valgfag', short: 'Valgfag' },
   { id: 's1', code: 'EXC3401', name: 'Business Communication, Culture and Ethics', short: 'BizCom' },
   { id: 's2', code: 'JUR3420', name: 'Forretningsjus', short: 'Forretningsjus' },
   { id: 's3', code: 'BØK3430', name: 'Bedriftsøkonomi og finans', short: 'Bedøk' },
@@ -95,5 +96,11 @@ assert.equal(a12.actions[0].date.getFullYear(), 2025, 'eksplisitt årstall skal 
 
 const a13 = parseSmartInput('eksamen i bedøk 1. august', subjects)
 assert.ok(a13.actions[0].date >= twoMonthsAgo, 'august ruller til neste år hvis > 2 måneder tilbake')
+
+const a14 = parseSmartInput('eksamen i JUR3420 31.02.2027', subjects)
+assert.equal(a14.ok, false, 'umulige datoer skal avvises')
+
+const a15 = parseSmartInput('eksamen i JUR3420 1. november', subjects)
+assert.equal(a15.actions[0].subject.id, 's2', 'tom fagkode skal ikke matche alt')
 
 console.log('parseSmartInput: ok')

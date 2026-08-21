@@ -14,6 +14,7 @@ dist-ssr
 /test-results/
 /playwright-report/
 /playwright/.cache/
+/supabase/.temp/
 
 # Editor directories and files
 .vscode/*
@@ -29,3 +30,9 @@ dist-ssr
 .vercel
 .env*
 website.zip
+
+# Lokale test- og sikkerhetsverktøyartefakter
+/index.html.1
+/JUS2010_1_26h.ics
+/strix_runs/
+/strix-instruction.md

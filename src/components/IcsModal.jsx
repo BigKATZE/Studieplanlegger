@@ -1,19 +1,23 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { parseIcs, guessKind, extractCode } from '../lib/ics'
 import { matchSubject } from '../lib/parseSmartInput'
 import { checkFile } from '../lib/upload'
 import { uid } from '../lib/store'
 import { supabase, hasSupabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
 import { Select, DateField } from './ui'
+import { isoWeek } from '../lib/date'
 
 const inputCls =
   'w-full rounded-md border border-line bg-surface px-3 py-2 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20'
 
-export default function IcsImport({ subjects, onImport, onClose }) {
+const KIND_LABELS = { lecture: 'forelesninger', reading: 'pensum', assignment: 'arbeidskrav', exam: 'eksamener' }
+
+export default function IcsImport({ subjects, data, onImport, onClose }) {
   const [feedUrl, setFeedUrl] = useState('')
   const [state, setState] = useState('config') // config | loading | review
   const [error, setError] = useState('')
   const [rows, setRows] = useState([])
+  const review = useMemo(() => analyzeRows(rows, data), [data, rows])
 
   const loadText = async (text) => {
     const events = parseIcs(text)
@@ -26,7 +30,7 @@ export default function IcsImport({ subjects, onImport, onClose }) {
       events.map((e) => {
         const kind = guessKind(e.title)
         const subj = matchSubject(e.title.toLowerCase(), subjects)
-        return { key: uid(), include: true, kind, title: e.title, date: e.date, time: e.time, subjectValue: subj?.id ?? 'new', newName: subj ? '' : extractCode(e.title) }
+        return { key: uid(), include: true, kind, title: e.title, date: e.date, time: e.time, room: e.room, subjectValue: subj?.id ?? 'new', newName: subj ? '' : extractCode(e.title) }
       }),
     )
     setState('review')
@@ -44,7 +48,7 @@ export default function IcsImport({ subjects, onImport, onClose }) {
         const { data: sessionData } = await supabase.auth.getSession()
         const token = sessionData.session?.access_token
         if (!token) {
-          throw new Error('Logg inn for å hente en ekstern kalenderfeed automatisk – eller last opp .ics-filen direkte under.')
+          throw new Error('Logg inn for å hente en ekstern kalenderfeed automatisk - eller last opp .ics-filen direkte under.')
         }
         const proxyUrl = `${supabaseUrl}/functions/v1/ics-proxy?url=${encodeURIComponent(feedUrl.trim())}`
         const res = await fetch(proxyUrl, {
@@ -57,7 +61,7 @@ export default function IcsImport({ subjects, onImport, onClose }) {
         await loadText(await res.text())
         return
       }
-      // Ingen Supabase konfigurert (lokal/gjest-modus) – prøv direkte fetch.
+      // Ingen Supabase konfigurert (lokal/gjest-modus) - prøv direkte fetch.
       // Vil ofte feile pga. CORS siden LMS-en ikke sender riktige headere.
       const res = await fetch(feedUrl.trim())
       if (!res.ok) throw new Error(`Feed svarte ${res.status}`)
@@ -89,7 +93,7 @@ export default function IcsImport({ subjects, onImport, onClose }) {
   const patch = (i, fields) => setRows((r) => r.map((row, j) => (j === i ? { ...row, ...fields } : row)))
 
   const confirm = () => {
-    onImport(rows)
+    onImport(rows.filter((_, i) => review.importable.has(i)))
     onClose()
   }
 
@@ -97,7 +101,7 @@ export default function IcsImport({ subjects, onImport, onClose }) {
         <div className="space-y-4">
           <p className="text-sm text-muted">
             Bruk Canvas-kalenderfeeden din i stedet for access token: Åpne Canvas → Konto → Kalender →
-            «Kalenderfeed», og lim inn URL-en under – eller last ned .ics-filen og last den opp.
+            «Kalenderfeed», og lim inn URL-en under - eller last ned .ics-filen og last den opp.
           </p>
           <form onSubmit={connect} className="space-y-4">
             <div>
@@ -124,16 +128,16 @@ export default function IcsImport({ subjects, onImport, onClose }) {
               type="file"
               accept=".ics,.ical,text/calendar"
               onChange={(e) => handleFile(e.target.files?.[0])}
-              className="block w-full text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-ink"
+              className="file-input block w-full text-sm text-muted"
             />
           </div>
         </div>
       ) : (
         <div className="space-y-4">
-          <p className="text-xs text-muted">
-            Fant {rows.length} hendelser. Velg fag for hver rad – ukjente opprettes som nytt fag. Velg om det er
-            forelesning, arbeidskrav eller eksamen.
-          </p>
+          <div className="rounded-md border border-line bg-paper/60 p-3 text-xs text-muted">
+            <p>Fant {rows.length} hendelser: {Object.entries(review.counts).map(([kind, count]) => `${count} ${KIND_LABELS[kind]}`).join(', ')}.</p>
+            <p className="mt-1">{review.importable.size} nye importeres{review.duplicates.size ? ` · ${review.duplicates.size} duplikater hoppes over` : ''}{review.invalid.size ? ` · ${review.invalid.size} ugyldige rader` : ''}.</p>
+          </div>
           <div className="space-y-2">
             {rows.map((r, i) => (
               <div key={r.key} className="rounded-md border border-line bg-paper/60 p-2">
@@ -145,11 +149,14 @@ export default function IcsImport({ subjects, onImport, onClose }) {
                     className="h-4 w-4 accent-secondary"
                     aria-label={`Inkluder ${r.title}`}
                   />
+                  {review.duplicates.has(i) && <span className="rounded bg-warning/10 px-1.5 py-0.5 text-xs text-warning">Duplikat</span>}
+                  {review.invalid.has(i) && <span className="rounded bg-danger/10 px-1.5 py-0.5 text-xs text-danger">Mangler data</span>}
                   <Select
                     value={r.kind}
                     onChange={(v) => patch(i, { kind: v })}
                     options={[
                       { value: 'lecture', label: 'Forelesning' },
+                      { value: 'reading', label: 'Pensum' },
                       { value: 'assignment', label: 'Arbeidskrav' },
                       { value: 'exam', label: 'Eksamen' },
                     ]}
@@ -169,12 +176,12 @@ export default function IcsImport({ subjects, onImport, onClose }) {
                     ariaLabel="Dato"
                   />
                 </div>
-                <div className="mt-2 flex items-center gap-2">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
                   <Select
                     value={r.subjectValue}
                     onChange={(v) => patch(i, { subjectValue: v })}
                     options={[...subjects.map((s) => ({ value: s.id, label: s.short })), { value: 'new', label: 'Nytt fag…' }]}
-                    className="w-48"
+                    className="w-full sm:w-48"
                     ariaLabel="Fag"
                   />
                   {r.subjectValue === 'new' && (
@@ -183,7 +190,16 @@ export default function IcsImport({ subjects, onImport, onClose }) {
                       value={r.newName}
                       onChange={(e) => patch(i, { newName: e.target.value })}
                       placeholder="Navn på nytt fag"
-                      className={`${inputCls} flex-1`}
+                      className={`${inputCls} min-w-0 w-full sm:flex-1`}
+                    />
+                  )}
+                  {r.kind === 'lecture' && (
+                    <input
+                      type="text"
+                      value={r.room ?? ''}
+                      onChange={(e) => patch(i, { room: e.target.value })}
+                      placeholder="Rom"
+                      className={`${inputCls} min-w-0 w-full sm:min-w-28 sm:flex-1`}
                     />
                   )}
                 </div>
@@ -192,8 +208,39 @@ export default function IcsImport({ subjects, onImport, onClose }) {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="btn-ghost">Avbryt</button>
-            <button type="button" onClick={confirm} className="btn-primary">Importer valgte</button>
+            <button type="button" onClick={confirm} className="btn-primary" disabled={review.importable.size === 0}>Importer {review.importable.size} nye</button>
           </div>
         </div>
       )
+}
+
+function analyzeRows(rows, data) {
+  const counts = { lecture: 0, reading: 0, assignment: 0, exam: 0 }
+  const invalid = new Set()
+  const duplicates = new Set()
+  const importable = new Set()
+  const seen = new Set()
+  rows.forEach((row, i) => {
+    if (!row.include) return
+    counts[row.kind]++
+    if (!row.title.trim() || !row.date || (row.subjectValue === 'new' && !row.newName.trim())) {
+      invalid.add(i)
+      return
+    }
+    const subject = row.subjectValue === 'new' ? `new:${row.newName.trim().toLowerCase()}` : row.subjectValue
+    const period = row.kind === 'reading' ? isoWeek(new Date(`${row.date}T00:00:00`)) : row.date
+    const key = `${row.kind}|${subject}|${row.title.trim().toLowerCase()}|${period}|${row.kind === 'lecture' ? row.time : ''}`
+    const existing = row.subjectValue !== 'new' && (
+      row.kind === 'exam' ? data.exams.some((x) => x.subjectId === subject && (x.title ?? '').trim().toLowerCase() === row.title.trim().toLowerCase() && x.date === row.date) :
+      row.kind === 'lecture' ? data.lectures.some((x) => x.subjectId === subject && (x.topic ?? '').trim().toLowerCase() === row.title.trim().toLowerCase() && x.date === row.date && x.start === (row.time || '10:00')) :
+      row.kind === 'reading' ? data.readings.some((x) => x.subjectId === subject && (x.title ?? '').trim().toLowerCase() === row.title.trim().toLowerCase() && x.week === period) :
+      data.assignments.some((x) => x.subjectId === subject && (x.title ?? '').trim().toLowerCase() === row.title.trim().toLowerCase() && x.deadline === row.date)
+    )
+    if (existing || seen.has(key)) duplicates.add(i)
+    else {
+      seen.add(key)
+      importable.add(i)
+    }
+  })
+  return { counts, invalid, duplicates, importable }
 }

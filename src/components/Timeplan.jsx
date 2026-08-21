@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react'
 import { isoWeek, weekRangeByWeek, weekdayShort, fmtShort, DEFAULT_WEEKS } from '../lib/date'
 import { SubjectChip, WeekFilter } from './ui'
+import { findLectureConflictIds } from '../lib/plannerFeatures'
+import WeekTemplates from './WeekTemplates'
 
-export default function Timeplan({ lectures, subjects, week, onWeekChange, onToggleLecture, onToggleChapter, onUpdateChapter, onRemoveChapter, onRemoveLecture, onEditLecture }) {
+export default function Timeplan({ lectures, subjects, week, onWeekChange, onToggleLecture, onToggleChapter, onUpdateChapter, onRemoveChapter, onRemoveLecture, onEditLecture, weekTemplates = [], onSaveTemplate, onApplyTemplate, onRemoveTemplate, conflictIds: suppliedConflictIds }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
   const [editingChapter, setEditingChapter] = useState(null)
   const [chapterText, setChapterText] = useState('')
+  const detectedConflictIds = useMemo(() => findLectureConflictIds(lectures), [lectures])
+  const conflictIds = suppliedConflictIds ?? detectedConflictIds
 
   const groups = useMemo(() => {
     const m = new Map()
@@ -20,7 +24,7 @@ export default function Timeplan({ lectures, subjects, week, onWeekChange, onTog
   }, [lectures])
 
   const groupsByWeek = useMemo(() => new Map(groups.map((g) => [g.week, g])), [groups])
-  const weeks = useMemo(() => groups.map((g) => g.week), [groups])
+  const weeks = DEFAULT_WEEKS
   const renderWeeks = week == null ? DEFAULT_WEEKS : [week]
 
   return (
@@ -29,6 +33,7 @@ export default function Timeplan({ lectures, subjects, week, onWeekChange, onTog
         <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Uke for uke</h2>
         <WeekFilter weeks={weeks} active={week} onChange={onWeekChange} />
       </div>
+      <WeekTemplates week={week} templates={weekTemplates} onSave={onSaveTemplate} onApply={onApplyTemplate} onRemove={onRemoveTemplate} />
       {lectures.length === 0 && (
         <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
           Ingen forelesninger ennå. Importer en timeplan eller legg til manuelt.
@@ -62,7 +67,7 @@ export default function Timeplan({ lectures, subjects, week, onWeekChange, onTog
                             {weekdayShort(date)} {fmtShort(date)}
                           </span>
                         </label>
-                        <span className="text-sm">{l.start}–{l.end}</span>
+                        <span className="text-sm">{l.start}-{l.end}</span>
                       </div>
                       {subject && <SubjectChip subject={subject} />}
                       {l.room && <span className="font-mono text-xs text-muted">{l.room}</span>}
@@ -85,8 +90,13 @@ export default function Timeplan({ lectures, subjects, week, onWeekChange, onTog
                       </div>
                     </div>
                     {l.topic && <p className="mt-1 pl-6 text-sm text-muted">{l.topic}</p>}
+                    {conflictIds.has(l.id) && <p role="alert" className="mt-2 pl-6 text-sm text-warning">Tidskonflikt med en annen forelesning denne dagen.</p>}
                     {l.chapters.length > 0 && (
-                      <ul className="mt-2 space-y-1 pl-6">
+                      <div className="mt-2 pl-6">
+                        <p className="mb-1 text-xs font-medium text-muted">
+                          {l.chapters.length === 1 ? 'Kapittel' : 'Kapitler'}
+                        </p>
+                        <ul className="space-y-1">
                         {l.chapters.map((c) => (
                           <li key={c.id} className="flex items-center gap-2">
                             <input
@@ -143,7 +153,8 @@ export default function Timeplan({ lectures, subjects, week, onWeekChange, onTog
                             )}
                           </li>
                         ))}
-                      </ul>
+                        </ul>
+                      </div>
                     )}
                   </div>
                 )

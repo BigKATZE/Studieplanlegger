@@ -3,6 +3,7 @@ import { Modal } from './Modals'
 import { Select, DateField, TimeField } from './ui'
 import { checkFile } from '../lib/upload'
 import IcsImport from './IcsModal'
+import { isValidBackupData, normalizePlannerData } from '../lib/store'
 
 const inputCls =
   'w-full rounded-md border border-line bg-surface px-2 py-1.5 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20'
@@ -61,7 +62,7 @@ function PdfImport({ subjects, onImport, onClose }) {
           type="file"
           accept="application/pdf,.pdf"
           onChange={(e) => handleFile(e.target.files?.[0])}
-          className="block w-full text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-ink"
+          className="file-input block w-full text-sm text-muted"
         />
       </label>
 
@@ -158,12 +159,12 @@ function BackupTab({ data, onImport, onClose }) {
     if (!file) return
     setError('')
     try {
-      const parsed = { assignments: [], exams: [], readings: [], ...JSON.parse(await file.text()) }
-      const keys = ['subjects', 'lectures', 'assignments', 'exams', 'readings']
-      if (!parsed || typeof parsed !== 'object' || keys.some((k) => !Array.isArray(parsed[k]))) {
+      const raw = JSON.parse(await file.text())
+      if (!isValidBackupData(raw)) {
         setError('Ugyldig fil. Dette ser ikke ut til å være en eksportert sikkerhetskopi.')
         return
       }
+      const parsed = normalizePlannerData(raw)
       setFileName(file.name)
       setConfirm(parsed)
     } catch {
@@ -177,6 +178,8 @@ function BackupTab({ data, onImport, onClose }) {
     readings: confirm.readings.length,
     assignments: confirm.assignments.length,
     exams: confirm.exams.length,
+    reviews: confirm.reviews.length,
+    weekTemplates: confirm.weekTemplates.length,
   }
 
   return (
@@ -195,7 +198,7 @@ function BackupTab({ data, onImport, onClose }) {
           type="file"
           accept="application/json,.json"
           onChange={(e) => handleFile(e.target.files?.[0])}
-          className="block w-full text-sm text-muted file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-ink"
+          className="file-input block w-full text-sm text-muted"
         />
         <p className="mt-1 text-xs text-muted">Importering erstatter alt nåværende innhold.</p>
       </div>
@@ -206,7 +209,7 @@ function BackupTab({ data, onImport, onClose }) {
         <div className="rounded-md border border-line bg-paper/60 p-3 text-sm">
           <p className="text-ink">
             «{fileName}» inneholder {counts.subjects} fag, {counts.lectures} forelesninger, {counts.readings} pensum,{' '}
-            {counts.assignments} arbeidskrav og {counts.exams} eksamener.
+            {counts.assignments} arbeidskrav, {counts.exams} eksamener, {counts.reviews} repetisjoner og {counts.weekTemplates} ukemaler.
           </p>
           <p className="mt-1 text-xs text-muted">Erstatte alt nåværende innhold med dette?</p>
           <div className="mt-3 flex justify-end gap-2">
@@ -232,7 +235,7 @@ export default function ImportModal({ subjects, data, onImportPdf, onImportIcs, 
   const [mode, setMode] = useState('pdf')
   return (
     <Modal title="Importer" onClose={onClose}>
-      <div className="mb-4 flex gap-1 rounded-lg border border-line bg-paper p-1">
+      <div className="mb-4 grid grid-cols-1 gap-1 rounded-lg border border-line bg-paper p-1 sm:grid-cols-3">
         {[
           ['pdf', 'Timeplan (PDF)'],
           ['ical', 'iCal'],
@@ -241,7 +244,7 @@ export default function ImportModal({ subjects, data, onImportPdf, onImportIcs, 
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`min-h-10 w-full rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
               mode === m ? 'bg-primary text-white' : 'text-muted hover:text-ink'
             }`}
           >
@@ -252,7 +255,7 @@ export default function ImportModal({ subjects, data, onImportPdf, onImportIcs, 
       {mode === 'pdf' ? (
         <PdfImport subjects={subjects} onImport={onImportPdf} onClose={onClose} />
       ) : mode === 'ical' ? (
-        <IcsImport subjects={subjects} onImport={onImportIcs} onClose={onClose} />
+        <IcsImport subjects={subjects} data={data} onImport={onImportIcs} onClose={onClose} />
       ) : (
         <BackupTab data={data} onImport={onImportBackup} onClose={onClose} />
       )}

@@ -12,10 +12,16 @@ export function extractSharedSubject(data, subjectId) {
 
   const lectures = (Array.isArray(data?.lectures) ? data.lectures : [])
     .filter((l) => l && l.subjectId === subjectId)
-    .map(({ subjectId: _subjectId, ...rest }) => rest)
+    .map(({ subjectId: _subjectId, done: _done, chapters = [], ...rest }) => ({
+      ...rest,
+      chapters: chapters.map(({ done: _chapterDone, ...chapter }) => chapter),
+    }))
   const readings = (Array.isArray(data?.readings) ? data.readings : [])
     .filter((r) => r && r.subjectId === subjectId)
-    .map(({ subjectId: _subjectId, ...rest }) => rest)
+    .map(({ subjectId: _subjectId, done: _done, chapters = [], ...rest }) => ({
+      ...rest,
+      chapters: chapters.map(({ done: _chapterDone, ...chapter }) => chapter),
+    }))
 
   return { subject, lectures, readings }
 }

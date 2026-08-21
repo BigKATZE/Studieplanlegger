@@ -66,20 +66,20 @@ export default function DeltFag({ token }) {
       <header className="relative mx-auto max-w-5xl px-4 pb-6 pt-10">
         <button
           onClick={exit}
-          className="absolute right-4 top-4 rounded p-1 text-sm text-muted hover:text-ink"
+          className="absolute right-4 top-4 min-h-10 rounded-[10px] px-2 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
         >
           Åpne planleggeren →
         </button>
         {data && (
           <div className="flex items-center gap-2">
-            <span className="chip" style={{ backgroundColor: (data.subject.color || '#7c3aed') + '1a', color: data.subject.color || '#7c3aed' }}>
+            <span className="chip subject-chip" style={{ '--subject-color': data.subject.color || '#146c54' }}>
               {data.subject.short || data.subject.name}
             </span>
             <span className="font-mono text-xs text-muted">{data.subject.code}</span>
           </div>
         )}
         <h1 className="mt-2 font-display text-3xl font-bold tracking-tight">{data?.subject?.name ?? 'Delt fag'}</h1>
-        <p className="mt-1 text-sm text-muted">Skrivebeskyttet visning – kun timeplan og pensum for dette faget.</p>
+        <p className="mt-1 text-sm text-muted">Skrivebeskyttet visning - kun timeplan og pensum for dette faget.</p>
       </header>
 
       <main className="mx-auto max-w-5xl space-y-8 px-4 pb-20">
@@ -113,7 +113,7 @@ export default function DeltFag({ token }) {
                           <div key={l.id} className="rounded-lg border border-line bg-surface p-4">
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
                               <span className="text-sm font-medium">
-                                {weekdayShort(date)} {fmtShort(date)} · {l.start}–{l.end}
+                                {weekdayShort(date)} {fmtShort(date)} · {l.start}-{l.end}
                               </span>
                               {l.room && <span className="font-mono text-xs text-muted">{l.room}</span>}
                               {l.lecturer && <span className="text-xs text-muted">{l.lecturer}</span>}

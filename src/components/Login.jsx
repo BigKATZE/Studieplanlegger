@@ -45,7 +45,7 @@ export default function Login({ onBack }) {
     })
     setBusy(false)
     if (err) setError(err.message)
-    else setInfo('Sjekk innboksen din – vi har sendt en lenke for å tilbakestille passordet.')
+    else setInfo('Sjekk innboksen din - vi har sendt en lenke for å tilbakestille passordet.')
   }
 
   return (
@@ -55,7 +55,7 @@ export default function Login({ onBack }) {
         <p className="mt-1 text-sm text-muted">
           {mode === 'login'
             ? 'Logg inn for å synkronisere planleggeren på tvers av enheter.'
-            : 'Opprett en konto – du kan bruke den på alle enhetene dine.'}
+            : 'Opprett en konto - du kan bruke den på alle enhetene dine.'}
         </p>
         <form onSubmit={submit} className="mt-5 space-y-4">
           <label className="block">

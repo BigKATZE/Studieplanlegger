@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { SubjectChip, DeadlineBadge, WeekFilter } from './ui'
-import { isoWeek, weekRangeByWeek, fmtShort, DEFAULT_WEEKS } from '../lib/date'
+import { iso, isoWeek, weekRangeByWeek, fmtShort, DEFAULT_WEEKS } from '../lib/date'
+import { examSubjectProgress } from '../lib/plannerFeatures'
 
-export default function Eksamener({ exams, subjects, onRemoveExam, onEditExam }) {
+export default function Eksamener({ exams, subjects, data, onRemoveExam, onEditExam }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
   const [week, setWeek] = useState(null)
 
@@ -44,7 +45,11 @@ export default function Eksamener({ exams, subjects, onRemoveExam, onEditExam })
               </div>
               <div className="mt-2 space-y-2">
                 {g?.exams.map((e) => {
-                const past = e.date < new Date().toISOString().slice(0, 10)
+                const today = iso(new Date())
+                const days = Math.round((new Date(`${e.date}T00:00:00`) - new Date(`${today}T00:00:00`)) / 86400000)
+                const past = days < 0
+                const progress = examSubjectProgress(e, data)
+                const countdown = days < 0 ? `${Math.abs(days)} dager siden` : days === 0 ? 'Eksamensdagen er i dag' : days === 1 ? '1 dag igjen' : `${days} dager igjen`
                 return (
                   <div
                     key={e.id}
@@ -55,6 +60,7 @@ export default function Eksamener({ exams, subjects, onRemoveExam, onEditExam })
                     {e.time && <span className="text-xs text-muted">kl. {e.time}</span>}
                     <SubjectChip subject={subjectById[e.subjectId]} />
                     {past && <span className="text-xs text-muted">(gjennomført)</span>}
+                    <span className="text-xs text-muted">{countdown}, {progress.completed} av {progress.total} gjennomført</span>
                     <div className="ml-auto flex items-center gap-2">
                       <button
                         onClick={() => onEditExam(e)}
@@ -79,7 +85,7 @@ export default function Eksamener({ exams, subjects, onRemoveExam, onEditExam })
           )
         })}
       </div>
-      <p className="mt-4 text-xs text-muted">{fmtShort(new Date())} – viser eksamener sortert etter uke.</p>
+      <p className="mt-4 text-xs text-muted">{fmtShort(new Date())} - viser eksamener sortert etter uke.</p>
     </section>
   )
 }

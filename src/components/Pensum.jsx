@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { SubjectChip, WeekFilter } from './ui'
 import { weekRangeByWeek, DEFAULT_WEEKS } from '../lib/date'
 
-export default function Pensum({ readings, subjects, onToggleReading, onToggleReadingChapter, onRemoveReading, onEditReading, onAdd }) {
+export default function Pensum({ readings, subjects, onToggleReading, onToggleReadingChapter, onRemoveReading, onEditReading }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
   const [week, setWeek] = useState(null)
 
@@ -25,14 +25,11 @@ export default function Pensum({ readings, subjects, onToggleReading, onToggleRe
     <section className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Pensum til forelesning</h2>
-        <div className="flex flex-wrap items-center gap-2">
-          <WeekFilter weeks={weeks} active={week} onChange={setWeek} />
-          <button onClick={onAdd} className="btn-primary">Legg til pensum</button>
-        </div>
+        <WeekFilter weeks={weeks} active={week} onChange={setWeek} />
       </div>
       {readings.length === 0 && (
         <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
-          Ingen pensum registrert. Legg til pensum eller skriv f.eks. «pensum kapittel 3 i forretningsjus» i feltet øverst.
+          Ingen pensum registrert. Skriv f.eks. «pensum kapittel 3 i forretningsjus» i feltet øverst.
         </p>
       )}
       {week == null && noneItems.length > 0 && (
