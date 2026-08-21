@@ -5,14 +5,25 @@ test('uten økt brukes appen som gjest, med Logg inn-knapp', async ({ page }) =>
   await expect(page.getByRole('heading', { name: 'Studieplanlegger' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Logg inn' })).toBeVisible()
   await expect(page.getByRole('status')).toHaveText('Lagret lokalt')
-  await page.getByRole('button', { name: 'Changelog' }).click()
-  const changelog = page.getByRole('dialog', { name: 'Changelog' })
-  await expect(changelog).toBeVisible()
-  await expect(changelog.getByRole('heading', { name: 'Nytt i studiehverdagen' })).toBeVisible()
-  await expect(changelog.getByText('Bryt ned arbeidskrav med kort, standard eller grundig detaljnivå og valgfritt tidsbudsjett.')).toBeVisible()
-  await changelog.getByRole('button', { name: 'Lukk' }).click()
+  await page.getByRole('button', { name: 'Changelog', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Changelog' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'v1.1' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Nytt i studiehverdagen' })).toBeVisible()
+  await expect(page.getByText('Bryt ned arbeidskrav med kort, standard eller grundig detaljnivå og valgfritt tidsbudsjett.')).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Changelog' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Logg inn' }).click()
   await expect(page.getByRole('button', { name: 'Logg inn', exact: true })).toBeVisible()
+})
+
+test('changelog fungerer som egen side på mobil', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Changelog', exact: true }).click()
+
+  await expect(page.getByRole('heading', { name: 'v1.1' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sikkerhet og utvikling' })).toBeVisible()
+  await expect(page.getByRole('dialog', { name: 'Changelog' })).toHaveCount(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > document.documentElement.clientWidth)).toBe(false)
 })
 
 test('leser v1-data når v2 ikke finnes', async ({ page }) => {

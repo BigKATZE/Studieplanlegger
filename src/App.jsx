@@ -467,8 +467,11 @@ export default function App() {
           </span>
           <button
             type="button"
-            onClick={() => openModal('changelog')}
-            className="min-h-10 rounded-[10px] px-2 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
+            onClick={() => setTab('changelog')}
+            aria-current={tab === 'changelog' ? 'page' : undefined}
+            className={`min-h-10 rounded-[10px] px-2 text-sm transition-colors hover:bg-surface hover:text-ink ${
+              tab === 'changelog' ? 'font-semibold text-primary' : 'text-muted'
+            }`}
           >
             Changelog
           </button>
@@ -657,6 +660,8 @@ export default function App() {
             <AiTools data={data} enabled={Boolean(hasSupabase && user && user.id !== 'local')} onAddReview={actions.addReview} />
           </Suspense>
         )}
+
+        {tab === 'changelog' && <Changelog />}
       </main>
 
       <footer className="mx-auto max-w-5xl px-4 pb-10">
@@ -714,11 +719,6 @@ export default function App() {
       {modal === 'password' && (
         <Modal title="Endre passord" onClose={closeModal}>
           <PasswordForm onClose={closeModal} />
-        </Modal>
-      )}
-      {modal === 'changelog' && (
-        <Modal title="Changelog" onClose={closeModal}>
-          <Changelog />
         </Modal>
       )}
       {modal === 'deleteAll' && (
