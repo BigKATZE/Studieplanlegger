@@ -6,13 +6,17 @@ export function buildSuggestionPayload(data, now = new Date()) {
   inTwoWeeks.setDate(inTwoWeeks.getDate() + 14)
   const lastLectureDate = iso(inTwoWeeks)
   const subject = Object.fromEntries(data.subjects.map((s) => [s.id, s.short || s.code || s.name]))
-  const item = (kind, value, date, status) => ({
-    kind,
-    subject: subject[value.subjectId] || 'Ukjent fag',
-    title: value.title || value.topic || kind,
-    date,
-    ...(status ? { status } : {}),
-  })
+  const item = (kind, value, date, status) => {
+    const details = value.chapters?.filter((chapter) => !chapter.done).map((chapter) => chapter.text).filter(Boolean).join('; ')
+    return {
+      kind,
+      subject: subject[value.subjectId] || 'Ukjent fag',
+      title: value.title || value.topic || kind,
+      date,
+      ...(details ? { details: details.slice(0, 1000) } : {}),
+      ...(status ? { status } : {}),
+    }
+  }
 
   const items = [
     ...data.assignments.filter((a) => a.status !== 'done').map((a) => item('Arbeidskrav', a, a.deadline, a.status)),

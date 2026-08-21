@@ -34,7 +34,7 @@ export default function AiSuggestions({ data, enabled }) {
         <div>
           <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">AI-forslag</h2>
           <p className="mt-1 text-sm text-muted">
-            {enabled ? 'Få hjelp til å prioritere de neste studieøktene.' : 'Logg inn for å få personlige studieforslag.'}
+            {enabled ? 'Få konkrete forslag til temaer og kapitler du bør lese.' : 'Logg inn for å få personlige leseforslag.'}
           </p>
         </div>
         <button type="button" onClick={generate} disabled={!enabled || loading} className="btn-ghost disabled:cursor-not-allowed disabled:opacity-50">
@@ -58,7 +58,7 @@ export default function AiSuggestions({ data, enabled }) {
           </ol>
         </div>
       )}
-      <p className="mt-3 text-xs text-muted">Fag, aktivitetstitler og datoer sendes til Gemini. Maks 5 forespørsler per bruker per dag.</p>
+      <p className="mt-3 text-xs text-muted">Fag, aktivitetstitler, kapitler og datoer sendes til Gemini. Maks 5 forespørsler per bruker per dag.</p>
     </section>
   )
 }
