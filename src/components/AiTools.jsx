@@ -38,6 +38,8 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
   const [answerInputs, setAnswerInputs] = useState({})
   const [feedbackByQuestion, setFeedbackByQuestion] = useState({})
   const [searchQuery, setSearchQuery] = useState('')
+  const [chatInput, setChatInput] = useState('')
+  const [chatMessages, setChatMessages] = useState([])
   const [examMinutes, setExamMinutes] = useState('30')
   const [examDifficulty, setExamDifficulty] = useState('medium')
   const [secondsLeft, setSecondsLeft] = useState(null)
@@ -106,6 +108,33 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
     }
   }
 
+  const sendChat = async (event) => {
+    if (event) event.preventDefault()
+    if (chatInput.trim().length < 3) { setError('Skriv et spørsmål på minst tre tegn.'); return }
+    if (!subjectId) { setError('Velg fag først.'); return }
+    const passages = rankSourcePassages(data.aiSources, subjectId, chatInput)
+    if (!passages.length) {
+      setError(sourceForSubject.length ? 'Fant ingen relevante utdrag i kildene. Prøv mer konkrete søkeord.' : 'Legg til en kilde i valgt fag før du starter chat.')
+      return
+    }
+    const userMessage = { role: 'user', content: chatInput.trim() }
+    const historyForRequest = chatMessages.slice(-10).map((message) => ({ role: message.role, content: message.content }))
+    setLoading(true)
+    setError('')
+    try {
+      const { data: response, error: invokeError } = await supabase.functions.invoke('study-suggestions', {
+        body: buildAiRequest('source-chat', chatInput, { subject: subjectLabel(data.subjects.find((x) => x.id === subjectId) || {}) }, { query: chatInput, passages, history: historyForRequest }),
+      })
+      if (invokeError || !response) throw new Error()
+      setChatMessages((previous) => [...previous, userMessage, { role: 'assistant', content: response.answer, grounded: response.grounded, citations: response.citations }])
+      setChatInput('')
+    } catch {
+      setError('Kunne ikke hente svar fra kildene.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const selectTool = (next) => {
     setTool(next)
     setText('')
@@ -114,6 +143,8 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
     setCopyState('')
     setError('')
     setPdfState('')
+    setChatMessages([])
+    setChatInput('')
   }
 
   const generate = async (event) => {
@@ -253,7 +284,7 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
 
       <div className="mt-5 flex flex-wrap gap-1 rounded-lg border border-line bg-surface p-1">
         {[
-          ['breakdown', 'Bryt ned arbeidskrav'], ['quiz', 'Lag øvingsspørsmål'], ['exam', 'Eksamensøving'], ['summary', 'Oppsummer'], ['source-search', 'Søk i kilder'], ['weekly-report', 'Ukerapport'],
+          ['breakdown', 'Bryt ned arbeidskrav'], ['quiz', 'Lag øvingsspørsmål'], ['exam', 'Eksamensøving'], ['summary', 'Oppsummer'], ['source-search', 'Søk i kilder'], ['source-chat', 'Chat med kilder'], ['weekly-report', 'Ukerapport'],
         ].map(([value, label]) => (
           <button key={value} type="button" onClick={() => selectTool(value)} className={`flex-1 rounded-md px-3 py-2 text-sm font-medium sm:flex-none ${tool === value ? 'bg-primary text-white' : 'text-muted hover:text-ink'}`}>
             {label}
@@ -266,7 +297,7 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
       ) : (
         <>
         <section className="mt-5 rounded-lg border border-line bg-surface p-5" aria-labelledby="ai-sources-heading"><h3 id="ai-sources-heading" className="font-semibold">Private fagkilder</h3><p className="mt-1 text-xs text-muted">Uttrukket tekst lagres og synkroniseres med kontoen din. Originale PDF-filer lastes ikke opp, og bare relevante utdrag sendes til Gemini ved søk.</p><div className="mt-3 grid gap-2 sm:grid-cols-2"><select aria-label="Fag for kilde" value={subjectId} onChange={(event) => setSubjectId(event.target.value)} className="rounded-md border border-line bg-paper p-2 text-sm"><option value="">Velg fag</option>{data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subjectLabel(subject)}</option>)}</select><input aria-label="Kildetittel" value={sourceTitle} onChange={(event) => setSourceTitle(event.target.value)} maxLength="300" className="rounded-md border border-line bg-paper p-2 text-sm" placeholder="Kildetittel" /></div><textarea aria-label="Kildetekst" value={sourceText} onChange={(event) => setSourceText(event.target.value)} maxLength="60000" rows="3" className="mt-2 w-full rounded-md border border-line bg-paper p-2 text-sm" placeholder="Notater eller tekst" /><div className="mt-2 flex flex-wrap gap-2"><button type="button" className="btn-ghost" onClick={() => { if (!subjectId || !sourceTitle.trim() || !sourceText.trim()) { setError('Velg fag og fyll ut tittel og kilde.'); return }; if (data.aiSources.length >= 25) { setError('Du kan lagre maksimalt 25 kilder.'); return }; onAddSource({ subjectId, title: sourceTitle, text: sourceText, sourceType: 'notes' }); setSourceTitle(''); setSourceText('') }}>Lagre kilde</button><label className="btn-ghost">Legg til PDF<input className="sr-only" type="file" accept="application/pdf,.pdf" onChange={(event) => addPdfSource(event.target.files?.[0])} /></label></div>{pdfState && <p className="mt-2 text-xs text-muted">{pdfState}</p>}{sourceForSubject.length > 0 && <ul className="mt-3 space-y-1 text-sm">{sourceForSubject.map((source) => <li key={source.id} className="flex justify-between gap-2"><span>{source.title}</span><button type="button" className="text-danger" onClick={() => onRemoveSource(source.id)}>Fjern</button></li>)}</ul>}</section>
-        <form onSubmit={generate} className="mt-5 rounded-lg border border-line bg-surface p-5">
+        <form onSubmit={tool === 'source-chat' ? sendChat : generate} className="mt-5 rounded-lg border border-line bg-surface p-5">
           {tool === 'breakdown' ? (
             <>
               <label htmlFor="ai-assignment" className="block text-sm font-medium">Arbeidskrav <span className="font-normal text-muted">(valgfritt)</span></label>
@@ -299,6 +330,8 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
             </>
           ) : tool === 'weekly-report' ? <p className="text-sm text-muted">Lag en ukesrapport basert på en begrenset, anonymisert planoversikt.</p> : tool === 'source-search' ? (
             <><label htmlFor="ai-subject" className="block text-sm font-medium">Fag</label><select id="ai-subject" required value={subjectId} onChange={(event) => setSubjectId(event.target.value)} className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm"><option value="">Velg fag</option>{data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subjectLabel(subject)}</option>)}</select><label htmlFor="source-query" className="mt-4 block text-sm font-medium">Spørsmål</label><input id="source-query" required value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="mt-1 w-full rounded-md border border-line bg-paper px-3 py-2 text-sm" /></>
+          ) : tool === 'source-chat' ? (
+            <><label htmlFor="ai-subject" className="block text-sm font-medium">Fag</label><select id="ai-subject" required value={subjectId} onChange={(event) => setSubjectId(event.target.value)} className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm"><option value="">Velg fag</option>{data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subjectLabel(subject)}</option>)}</select><p className="mt-1 text-xs text-muted">Svarer kun fra kildene dine, husker siste 10 meldinger.</p></>
           ) : tool === 'exam' ? (<><div className="grid gap-3 sm:grid-cols-3"><label htmlFor="exam-minutes" className="block text-sm font-medium">Tid (minutter)<input id="exam-minutes" min="5" max="180" type="number" value={examMinutes} onChange={(event) => setExamMinutes(event.target.value)} onBlur={() => setExamMinutes(String(Math.min(180, Math.max(5, Number(examMinutes) || 30))))} className="mt-1 w-full rounded-md border border-line bg-paper p-2 text-sm" /></label><label htmlFor="exam-count" className="block text-sm font-medium">Antall spørsmål<input id="exam-count" min="3" max="15" type="number" value={questionCount} onChange={(event) => setQuestionCount(event.target.value)} onBlur={() => setQuestionCount(String(normalizedQuestionCount))} className="mt-1 w-full rounded-md border border-line bg-paper p-2 text-sm" /></label><label htmlFor="exam-difficulty" className="block text-sm font-medium">Vanskelighet<select id="exam-difficulty" value={examDifficulty} onChange={(event) => setExamDifficulty(event.target.value)} className="mt-1 w-full rounded-md border border-line bg-paper p-2 text-sm"><option value="easy">Lett</option><option value="medium">Middels</option><option value="hard">Vanskelig</option></select></label></div><p className="mt-2 text-xs text-muted">Lag oppgaver fra teksten og lever når du er ferdig.</p></>)
            : (
             <>
@@ -348,10 +381,29 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
               {pdfState && <p role="status" className="mt-1 text-xs text-muted">{pdfState}</p>}
             </>
           )}
-          {tool !== 'weekly-report' && tool !== 'source-search' && <textarea id="ai-source" value={text} onChange={(event) => setText(event.target.value)} maxLength={20_000} rows={10} className="mt-2 w-full rounded-md border border-line bg-paper px-3 py-2 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20" placeholder={tool === 'breakdown' ? 'Lim inn oppgaveteksten her…' : 'Lim inn notater eller pensumtekst her…'} />}
+          {tool !== 'weekly-report' && tool !== 'source-search' && tool !== 'source-chat' && <textarea id="ai-source" value={text} onChange={(event) => setText(event.target.value)} maxLength={20_000} rows={10} className="mt-2 w-full rounded-md border border-line bg-paper px-3 py-2 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20" placeholder={tool === 'breakdown' ? 'Lim inn oppgaveteksten her…' : 'Lim inn notater eller pensumtekst her…'} />}
+          {tool === 'source-chat' && (
+            <>
+              <div className="mt-4 space-y-3 max-h-96 overflow-y-auto rounded-md bg-paper p-3">
+                {chatMessages.length === 0 ? <p className="text-sm text-muted">Ingen meldinger ennå. Start med et spørsmål om kildene dine.</p> : chatMessages.map((message, index) => (
+                  <div key={index} className={`rounded-md p-3 text-sm ${message.role === 'user' ? 'bg-primary text-white' : 'bg-surface border border-line text-ink'}`}>
+                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    {message.role === 'assistant' && !message.grounded && <p className="mt-2 text-xs text-warning">Kildene er ikke tilstrekkelige for et sikkert svar.</p>}
+                    {message.role === 'assistant' && message.citations?.length > 0 && <ul className="mt-2 text-xs text-muted">{message.citations.map((citation) => <li key={citation.passageId}>{citation.sourceTitle} · avsnitt {citation.index}</li>)}</ul>}
+                  </div>
+                ))}
+              </div>
+              <label htmlFor="chat-input" className="mt-4 block text-sm font-medium">Spørsmål</label>
+              <div className="mt-1 flex gap-2">
+                <input id="chat-input" value={chatInput} onChange={(event) => setChatInput(event.target.value)} className="flex-1 rounded-md border border-line bg-paper px-3 py-2 text-sm" placeholder="Spør om kildene..." />
+                <button type="submit" disabled={loading} className="btn-primary disabled:opacity-50">Send</button>
+              </div>
+              {chatMessages.length > 0 && <button type="button" onClick={() => setChatMessages([])} className="btn-ghost mt-2 !min-h-8 !px-2 !py-1 text-xs">Tøm samtale</button>}
+            </>
+          )}
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs text-muted">{tool === 'source-search' ? 'Bare relevante tekstutdrag sendes.' : `${text.length.toLocaleString('nb-NO')} / 20 000 tegn`}</span>
-            <button type="submit" disabled={loading} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">{loading ? 'Arbeider…' : tool === 'breakdown' ? 'Lag arbeidsplan' : tool === 'exam' && result?.questions ? 'Lever eksamen' : tool === 'exam' ? 'Lag eksamensøving' : tool === 'summary' ? 'Lag oppsummering' : tool === 'source-search' ? 'Søk i kilder' : tool === 'weekly-report' ? 'Lag ukesrapport' : `Lag ${normalizedQuestionCount} spørsmål`}</button>
+            <span className="text-xs text-muted">{tool === 'source-search' ? 'Bare relevante tekstutdrag sendes.' : tool === 'source-chat' ? `${chatMessages.length} meldinger • bare utdrag + historikk sendes.` : `${text.length.toLocaleString('nb-NO')} / 20 000 tegn`}</span>
+            {tool !== 'source-chat' && <button type="submit" disabled={loading} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">{loading ? 'Arbeider…' : tool === 'breakdown' ? 'Lag arbeidsplan' : tool === 'exam' && result?.questions ? 'Lever eksamen' : tool === 'exam' ? 'Lag eksamensøving' : tool === 'summary' ? 'Lag oppsummering' : tool === 'source-search' ? 'Søk i kilder' : tool === 'weekly-report' ? 'Lag ukesrapport' : `Lag ${normalizedQuestionCount} spørsmål`}</button>}
           </div>
           {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
         </form></>

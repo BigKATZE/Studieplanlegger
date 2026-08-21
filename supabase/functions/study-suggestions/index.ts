@@ -21,7 +21,7 @@ function json(body: unknown, status: number, origin: string | null) {
 }
 
 type Payload = {
-  tool: 'breakdown' | 'quiz' | 'feedback' | 'summary' | 'source-search' | 'weekly-report' | 'exam' | 'exam-feedback'
+  tool: 'breakdown' | 'quiz' | 'feedback' | 'summary' | 'source-search' | 'source-chat' | 'weekly-report' | 'exam' | 'exam-feedback'
   text: string
   context: { subject?: string; assignment?: string }
   breakdown?: { detail: 'compact' | 'standard' | 'detailed'; timeBudgetHours?: number }
@@ -29,6 +29,7 @@ type Payload = {
   feedback?: { question: string; expectedAnswer: string; userAnswer: string }
   summary?: Record<string, never>
   search?: { query: string; passages: Array<{ id: string; sourceId: string; sourceTitle: string; index: number; text: string }> }
+  chat?: { query: string; passages: Array<{ id: string; sourceId: string; sourceTitle: string; index: number; text: string }>; history: Array<{ role: 'user' | 'assistant'; content: string }> }
   weekly?: { snapshot: Record<string, unknown> }
   exam?: { count: number; minutes: number; difficulty: 'easy' | 'medium' | 'hard' }
   examFeedback?: { questions: Array<{ question: string; expectedAnswer: string; userAnswer: string }> }
@@ -37,15 +38,15 @@ type Payload = {
 function validPayload(value: unknown): value is Payload {
   if (!value || typeof value !== 'object') return false
   const payload = value as Record<string, unknown>
-  if (!['breakdown', 'quiz', 'feedback', 'summary', 'source-search', 'weekly-report', 'exam', 'exam-feedback'].includes(payload.tool as string)) return false
+  if (!['breakdown', 'quiz', 'feedback', 'summary', 'source-search', 'source-chat', 'weekly-report', 'exam', 'exam-feedback'].includes(payload.tool as string)) return false
   if (typeof payload.text !== 'string' || payload.text.length > 20_000 ||
-    (!['weekly-report', 'source-search', 'feedback', 'exam-feedback'].includes(payload.tool as string) && payload.text.trim().length < 20)) return false
+    (!['weekly-report', 'source-search', 'source-chat', 'feedback', 'exam-feedback'].includes(payload.tool as string) && payload.text.trim().length < 20)) return false
   if (!payload.context || typeof payload.context !== 'object' || Array.isArray(payload.context)) return false
   if (!Object.entries(payload.context).every(([key, item]) =>
     ['subject', 'assignment'].includes(key) && typeof item === 'string' && item.length <= 200)) return false
   const detailKey = {
     breakdown: 'breakdown', quiz: 'quiz', feedback: 'feedback', summary: 'summary',
-    'source-search': 'search', 'weekly-report': 'weekly', exam: 'exam', 'exam-feedback': 'examFeedback',
+    'source-search': 'search', 'source-chat': 'chat', 'weekly-report': 'weekly', exam: 'exam', 'exam-feedback': 'examFeedback',
   }[payload.tool as string]
   if (!exactKeys(payload, ['tool', 'text', 'context', detailKey])) return false
   if (payload.tool === 'breakdown') {
@@ -76,6 +77,23 @@ function validPayload(value: unknown): value is Payload {
       totalCharacters += (item.text as string).length
       return totalCharacters <= 12_000
     })
+  }
+  if (payload.tool === 'source-chat') {
+    const chat = payload.chat as Record<string, unknown>
+    if (!chat || !exactKeys(chat, ['query', 'passages', 'history']) || !validString(chat.query, 1_000)) return false
+    if (!Array.isArray(chat.passages) || chat.passages.length < 1 || chat.passages.length > 30) return false
+    if (!Array.isArray(chat.history) || chat.history.length > 10) return false
+    if (!chat.history.every((entry) => entry && typeof entry === 'object' && !Array.isArray(entry) && exactKeys(entry as Record<string, unknown>, ['role', 'content']) && ['user', 'assistant'].includes((entry as Record<string, unknown>).role as string) && validString((entry as Record<string, unknown>).content, 1000))) return false
+    let totalCharacters = 0
+    return chat.passages.every((passage) => {
+      if (!passage || typeof passage !== 'object' || Array.isArray(passage)) return false
+      const item = passage as Record<string, unknown>
+      if (!exactKeys(item, ['id', 'sourceId', 'sourceTitle', 'index', 'text']) ||
+        !validString(item.id, 128) || !validString(item.sourceId, 128) || !validString(item.sourceTitle, 300) ||
+        !Number.isInteger(item.index) || (item.index as number) < 1 || !validString(item.text, 1_600)) return false
+      totalCharacters += (item.text as string).length
+      return totalCharacters <= 12_000
+    }) && JSON.stringify(chat.history).length <= 8000
   }
   if (payload.tool === 'exam') { const x = payload.exam as Record<string, unknown>; return !!x && exactKeys(x, ['count', 'minutes', 'difficulty']) && Number.isInteger(x.count) && (x.count as number) >= 3 && (x.count as number) <= 15 && Number.isInteger(x.minutes) && (x.minutes as number) >= 5 && (x.minutes as number) <= 180 && ['easy', 'medium', 'hard'].includes(x.difficulty as string) }
   if (payload.tool === 'exam-feedback') { const x = payload.examFeedback as Record<string, unknown>; return !!x && exactKeys(x, ['questions']) && Array.isArray(x.questions) && x.questions.length >= 1 && x.questions.length <= 15 && (x.questions as unknown[]).every((item) => { const q = item as Record<string, unknown>; return q && exactKeys(q, ['question', 'expectedAnswer', 'userAnswer']) && validString(q.question, 2000) && validString(q.expectedAnswer, 2000) && typeof q.userAnswer === 'string' && q.userAnswer.length <= 4000 }) }
@@ -165,6 +183,10 @@ function requestFor(payload: Payload) {
   if (payload.tool === 'feedback') return { prompt: `Vurder studentens svar som korrekt, delvis eller feil mot fasiten. Gi kort, støttende studiefeedback på norsk. ${untrusted}\nSpørsmål: ${payload.feedback!.question}\nFasit: ${payload.feedback!.expectedAnswer}\nStudentens svar: ${payload.feedback!.userAnswer}`, schema: { type: 'OBJECT', properties: { verdict: { type: 'STRING', enum: ['correct', 'partial', 'incorrect'] }, feedback: { type: 'STRING' } }, required: ['verdict', 'feedback'] }, maxOutputTokens: 500 }
   if (payload.tool === 'summary') return { prompt: `Lag en strukturert, nøktern oppsummering på norsk av kildeteksten. ${untrusted}\nKildetekst:\n${payload.text}`, schema: { type: 'OBJECT', properties: { summary: { type: 'STRING' }, keyPoints: { type: 'ARRAY', items: { type: 'STRING' } }, keyConcepts: { type: 'ARRAY', items: { type: 'STRING' } }, reviewQuestions: { type: 'ARRAY', items: { type: 'OBJECT', properties: { question: { type: 'STRING' }, answer: { type: 'STRING' } }, required: ['question', 'answer'] } } }, required: ['summary', 'keyPoints', 'keyConcepts', 'reviewQuestions'] }, maxOutputTokens: 1800 }
   if (payload.tool === 'source-search') return { prompt: `Svar på spørsmålet kun fra de merkede utdragene. Oppgi grounded=false hvis de ikke er nok. Siter bare gyldige passageId-er. ${untrusted}\nSpørsmål: ${payload.search!.query}\nUtdrag: ${JSON.stringify(payload.search!.passages)}`, schema: { type: 'OBJECT', properties: { answer: { type: 'STRING' }, grounded: { type: 'BOOLEAN' }, citations: { type: 'ARRAY', items: { type: 'OBJECT', properties: { passageId: { type: 'STRING' }, sourceTitle: { type: 'STRING' }, index: { type: 'INTEGER' } }, required: ['passageId', 'sourceTitle', 'index'] } } }, required: ['answer', 'grounded', 'citations'] }, maxOutputTokens: 1600 }
+  if (payload.tool === 'source-chat') {
+    const historyText = payload.chat!.history.map((entry) => `${entry.role === 'user' ? 'Student' : 'Assistent'}: ${entry.content}`).join('\n')
+    return { prompt: `Du er en hjelpsom studieassistent som svarer kun fra de merkede utdragene. Bruk samtalehistorikken som kontekst, men svar alltid kun fra utdragene. Oppgi grounded=false hvis utdragene ikke er nok. Siter bare gyldige passageId-er. ${untrusted}\nSamtalehistorikk:\n${historyText || '(ingen tidligere meldinger)'}\n\nSpørsmål: ${payload.chat!.query}\nUtdrag: ${JSON.stringify(payload.chat!.passages)}`, schema: { type: 'OBJECT', properties: { answer: { type: 'STRING' }, grounded: { type: 'BOOLEAN' }, citations: { type: 'ARRAY', items: { type: 'OBJECT', properties: { passageId: { type: 'STRING' }, sourceTitle: { type: 'STRING' }, index: { type: 'INTEGER' } }, required: ['passageId', 'sourceTitle', 'index'] } } }, required: ['answer', 'grounded', 'citations'] }, maxOutputTokens: 1600 }
+  }
   if (payload.tool === 'weekly-report') return { prompt: `Lag en kort studie-ukerapport på norsk basert bare på dette anonymiserte planutdraget. Beskriv fullført arbeid, forfalt/kommende arbeid og konkrete fokuspunkt. ${untrusted}\nData: ${JSON.stringify(payload.weekly!.snapshot)}`, schema: { type: 'OBJECT', properties: { summary: { type: 'STRING' }, completed: { type: 'ARRAY', items: { type: 'STRING' } }, overdue: { type: 'ARRAY', items: { type: 'STRING' } }, upcoming: { type: 'ARRAY', items: { type: 'STRING' } }, focus: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['summary', 'completed', 'overdue', 'upcoming', 'focus'] }, maxOutputTokens: 1500 }
   if (payload.tool === 'exam') return { prompt: `Lag nøyaktig ${payload.exam!.count} ${payload.exam!.difficulty}-vanskelige eksamensøvingsspørsmål med korte fasitsvar på norsk fra kildeteksten. Dette er trening, ikke en formell karakter. ${untrusted}\nKildetekst:\n${payload.text}`, schema: { type: 'OBJECT', properties: { questions: { type: 'ARRAY', minItems: payload.exam!.count, maxItems: payload.exam!.count, items: { type: 'OBJECT', properties: { question: { type: 'STRING' }, answer: { type: 'STRING' } }, required: ['question', 'answer'] } } }, required: ['questions'] }, maxOutputTokens: 2800 }
   if (payload.tool === 'exam-feedback') return { prompt: `Gi studiefeedback, ikke formell karakter, for hvert svar mot fasiten. Hver score må være heltall 0–10. Hvis userAnswer er "pass", tom eller kun whitespace, betrakt det som at studenten hoppet over spørsmålet — gi da score 0 og forklar kort hva fasitsvaret skulle vært. ${untrusted}\nSvar: ${JSON.stringify(payload.examFeedback!.questions)}`, schema: { type: 'OBJECT', properties: { perQuestion: { type: 'ARRAY', items: { type: 'OBJECT', properties: { feedback: { type: 'STRING' }, score: { type: 'INTEGER' } }, required: ['feedback', 'score'] } }, totalScore: { type: 'INTEGER' }, summary: { type: 'STRING' }, focusAreas: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['perQuestion', 'totalScore', 'summary', 'focusAreas'] }, maxOutputTokens: 1800 }
@@ -212,6 +234,7 @@ function validResult(payload: Payload, result: unknown) {
   if (payload.tool === 'summary') return validString(value.summary, 3000) && validStringArray(value.keyPoints, 1, 12, 500) && validStringArray(value.keyConcepts, 1, 12, 500) && Array.isArray(value.reviewQuestions) && value.reviewQuestions.length <= 12 && value.reviewQuestions.every((x) => validFields(x, ['question', 'answer']))
   if (payload.tool === 'weekly-report') return validString(value.summary, 3000) && ['completed', 'overdue', 'upcoming', 'focus'].every((key) => validStringArray(value[key], 0, 20, 500))
   if (payload.tool === 'source-search') { const allowed = new Map(payload.search!.passages.map((p) => [p.id, p])); return validString(value.answer, 4000) && typeof value.grounded === 'boolean' && Array.isArray(value.citations) && value.citations.length <= 10 && value.citations.every((citation) => { const x = citation as Record<string, unknown>; const passage = allowed.get(x.passageId as string); return passage && x.sourceTitle === passage.sourceTitle && x.index === passage.index }) }
+  if (payload.tool === 'source-chat') { const allowed = new Map(payload.chat!.passages.map((p) => [p.id, p])); return validString(value.answer, 4000) && typeof value.grounded === 'boolean' && Array.isArray(value.citations) && value.citations.length <= 10 && value.citations.every((citation) => { const x = citation as Record<string, unknown>; const passage = allowed.get(x.passageId as string); return passage && x.sourceTitle === passage.sourceTitle && x.index === passage.index }) }
   if (payload.tool === 'exam') return Array.isArray(value.questions) && value.questions.length === payload.exam!.count && value.questions.every((question) => validFields(question, ['question', 'answer']))
   if (payload.tool === 'exam-feedback') return Array.isArray(value.perQuestion) && value.perQuestion.length === payload.examFeedback!.questions.length && value.perQuestion.every((x) => { const q = x as Record<string, unknown>; return validString(q.feedback, 1000) && Number.isInteger(q.score) && (q.score as number) >= 0 && (q.score as number) <= 10 }) && Number.isInteger(value.totalScore) && (value.totalScore as number) >= 0 && (value.totalScore as number) <= payload.examFeedback!.questions.length * 10 && validString(value.summary, 3000) && validStringArray(value.focusAreas, 0, 10, 500)
   return Array.isArray(value.questions) && value.questions.length === payload.quiz!.count &&
