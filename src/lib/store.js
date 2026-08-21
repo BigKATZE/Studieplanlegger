@@ -1,6 +1,6 @@
 const KEY = 'oliarev-study-planner-v2'
 const LEGACY_KEY = 'oliarev-study-planner-v1'
-const EMPTY_DATA = { subjects: [], lectures: [], assignments: [], exams: [], readings: [], reviews: [], weekTemplates: [] }
+const EMPTY_DATA = { subjects: [], lectures: [], assignments: [], exams: [], readings: [], reviews: [], weekTemplates: [], aiSources: [], quizAttempts: [], workPlans: [] }
 
 export function uid() {
   return crypto.randomUUID()
@@ -75,6 +75,21 @@ function normalizeWeekTemplate(template) {
   }
 }
 
+const cleanText = (value, max = 2000) => typeof value === 'string' ? value.trim().slice(0, max) : ''
+function normalizeSource(item) {
+  if (!isRecord(item) || !cleanText(item.id, 128) || !cleanText(item.subjectId, 128) || !cleanText(item.title, 300) || !cleanText(item.text, 60_000) || !['notes', 'pdf'].includes(item.sourceType)) return null
+  return { id: cleanText(item.id, 128), subjectId: cleanText(item.subjectId, 128), title: cleanText(item.title, 300), text: cleanText(item.text, 60_000), sourceType: item.sourceType, ...(cleanText(item.fileName, 300) ? { fileName: cleanText(item.fileName, 300) } : {}), createdAt: cleanText(item.createdAt, 80) }
+}
+function normalizeAttempt(item) {
+  if (!isRecord(item) || !cleanText(item.id, 128) || !cleanText(item.subjectId, 128) || !cleanText(item.question) || !cleanText(item.expectedAnswer) || !cleanText(item.userAnswer) || !['correct', 'partial', 'incorrect'].includes(item.verdict)) return null
+  return { id: cleanText(item.id, 128), subjectId: cleanText(item.subjectId, 128), sourceId: cleanText(item.sourceId, 128), question: cleanText(item.question), expectedAnswer: cleanText(item.expectedAnswer), userAnswer: cleanText(item.userAnswer), verdict: item.verdict, feedback: cleanText(item.feedback, 1000), createdAt: cleanText(item.createdAt, 80) }
+}
+function normalizeWorkPlan(item) {
+  if (!isRecord(item) || !cleanText(item.id, 128) || !cleanText(item.title, 300)) return null
+  const steps = Array.isArray(item.steps) ? item.steps.map((step) => isRecord(step) && cleanText(step.id, 128) && cleanText(step.title, 300) ? { id: cleanText(step.id, 128), title: cleanText(step.title, 300), description: cleanText(step.description), doneCriteria: cleanText(step.doneCriteria, 1000), estimatedMinutes: Number.isInteger(step.estimatedMinutes) ? Math.max(0, Math.min(600, step.estimatedMinutes)) : 0, completed: Boolean(step.completed) } : null).filter(Boolean) : []
+  return { id: cleanText(item.id, 128), assignmentId: cleanText(item.assignmentId, 128), subjectId: cleanText(item.subjectId, 128), title: cleanText(item.title, 300), summary: cleanText(item.summary), requirements: Array.isArray(item.requirements) ? item.requirements.map((x) => cleanText(x, 500)).filter(Boolean).slice(0, 15) : [], steps, clarifications: Array.isArray(item.clarifications) ? item.clarifications.map((x) => cleanText(x, 500)).filter(Boolean).slice(0, 10) : [], createdAt: cleanText(item.createdAt, 80) }
+}
+
 export function normalizePlannerData(data) {
   if (!isRecord(data)) return { ...EMPTY_DATA }
   const unique = (items) => {
@@ -94,12 +109,15 @@ export function normalizePlannerData(data) {
     readings: (Array.isArray(data.readings) ? data.readings : []).map((reading) => ({ ...reading, chapters: Array.isArray(reading?.chapters) ? reading.chapters : [] })),
     reviews: unique((Array.isArray(data.reviews) ? data.reviews : []).map(normalizeReview)),
     weekTemplates: unique((Array.isArray(data.weekTemplates) ? data.weekTemplates : []).map(normalizeWeekTemplate)),
+    aiSources: unique((Array.isArray(data.aiSources) ? data.aiSources : []).map(normalizeSource)).slice(0, 25),
+    quizAttempts: unique((Array.isArray(data.quizAttempts) ? data.quizAttempts : []).map(normalizeAttempt)).slice(-200),
+    workPlans: unique((Array.isArray(data.workPlans) ? data.workPlans : []).map(normalizeWorkPlan)).slice(0, 100),
   }
 }
 
 export function isValidBackupData(data) {
   if (!isRecord(data) || !Array.isArray(data.subjects) || !Array.isArray(data.lectures)) return false
-  return ['assignments', 'exams', 'readings', 'reviews', 'weekTemplates'].every((key) => !(key in data) || Array.isArray(data[key]))
+  return ['assignments', 'exams', 'readings', 'reviews', 'weekTemplates', 'aiSources', 'quizAttempts', 'workPlans'].every((key) => !(key in data) || Array.isArray(data[key]))
 }
 
 export function load() {

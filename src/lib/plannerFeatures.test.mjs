@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { advanceReview, applyWeekTemplate, createWeekTemplate, examSubjectProgress, findLectureConflictIds } from './plannerFeatures.js'
+import { advanceReview, applyWeekTemplate, createWeekTemplate, examSubjectProgress, findLectureConflictIds, proposeReschedules } from './plannerFeatures.js'
 
 const conflict = findLectureConflictIds([{ id: 'a', date: '2026-08-24', start: '09:00', end: '10:00' }, { id: 'b', date: '2026-08-24', start: '09:30', end: '10:30' }, { id: 'c', date: '2026-08-24', start: '', end: '11:00' }, { id: 'd', date: '2026-08-24', start: '10:30', end: '11:00' }])
 assert.deepEqual([...conflict].sort(), ['a', 'b'])
@@ -30,3 +30,4 @@ const onlyExisting = applyWeekTemplate(mixedTemplate, 36, [], (() => { let n = 0
 assert.equal(onlyExisting.length, 1)
 assert.equal(onlyExisting[0].subjectId, 's')
 assert.deepEqual(applyWeekTemplate({ ...template, lectures: [{ ...template.lectures[0], subjectId: 'deleted' }] }, 36, [], () => 'id', new Date('2026-08-21T08:00:00'), new Set(['s'])), [])
+assert.deepEqual(proposeReschedules({ assignments: [{ id: 'a', title: 'Oppgave', deadline: '2026-08-18', status: 'not_started' }], reviews: [{ id: 'r', title: 'Kort', nextReview: '2026-08-19' }], exams: [{ date: '2026-08-22' }] }, new Date('2026-08-21T12:00:00')), [{ type: 'assignment', id: 'a', title: 'Oppgave', from: '2026-08-18', to: '2026-08-23' }, { type: 'review', id: 'r', title: 'Kort', from: '2026-08-19', to: '2026-08-24' }])

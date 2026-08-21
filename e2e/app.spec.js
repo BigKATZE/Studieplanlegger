@@ -288,3 +288,85 @@ test('app loads, pensum tab og fagfilter fungerer', async ({ page }) => {
   await page.getByRole('button', { name: 'Ja, slett alt' }).click()
   await expect(page.getByText('Ingen fag ennå. Legg til et fag eller importer en timeplan.')).toBeVisible()
 })
+
+test('forslag til ny dato må godkjennes før arbeidskravet flyttes', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('oliarev-study-planner-v2', JSON.stringify({ subjects: [{ id: 's', name: 'Test', short: 'Test' }], lectures: [], readings: [], exams: [], reviews: [], weekTemplates: [], aiSources: [], quizAttempts: [], workPlans: [], assignments: [{ id: 'a', subjectId: 's', title: 'Forfalt oppgave', deadline: '2020-01-01', status: 'not_started' }] })))
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Oversikt', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Forslag til ny dato' })).toBeVisible()
+  await expect(page.getByText('2020-01-01')).toBeVisible()
+  await page.getByRole('button', { name: 'Bruk', exact: true }).click()
+  await page.getByRole('button', { name: 'Arbeidskrav', exact: true }).click()
+  await expect(page.getByText('2020-01-01')).toHaveCount(0)
+})
+
+test('delt arbeidsplan bruker kun det offentlige funksjonssvaret', async ({ page }) => {
+  await page.route('**/functions/v1/shared-plan', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ plan: { id: 'p', title: 'Delt plan', summary: 'Kun synlig tekst', steps: [{ id: 's', title: 'Les kilden', description: 'Start her' }] } }) }))
+  await page.goto('/?plan=abcdefghijklmnop')
+  await expect(page.getByRole('heading', { name: 'Delt plan' })).toBeVisible()
+  await expect(page.getByText('Les kilden')).toBeVisible()
+})
+
+async function aiPage(page, suffix = 'ai-new') {
+  const user = { id: '55555555-5555-5555-5555-000000000001', email: `${suffix}@example.com`, app_metadata: {}, user_metadata: {}, aud: 'authenticated' }
+  const session = { access_token: 'fake', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: 'fake', user }
+  await page.addInitScript(({ session, user }) => localStorage.setItem('sb-icihdeerjveozgotyqbm-auth-token', JSON.stringify(session)) || localStorage.setItem(`oliarev-study-planner-v2-${user.id}`, JSON.stringify({ subjects: [{ id: 's', name: 'Kjemi', short: 'Kjemi' }], lectures: [], readings: [], assignments: [], exams: [], reviews: [], weekTemplates: [], aiSources: [], quizAttempts: [], workPlans: [] })), { session, user })
+  await page.route('**/rest/v1/user_data*', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }))
+  await page.goto('/'); await page.getByRole('button', { name: 'AI', exact: true }).click()
+  return user
+}
+
+test('lagrer kilde og viser bundet kildehenvisning fra AI-søk', async ({ page }) => {
+  await aiPage(page, 'source')
+  await page.getByLabel('Fag for kilde').selectOption('s'); await page.getByLabel('Kildetittel').fill('Kapittel 1'); await page.getByLabel('Kildetekst').fill('Atomer består av protoner og elektroner.')
+  await page.getByRole('button', { name: 'Lagre kilde' }).click(); await expect(page.getByText('Kapittel 1')).toBeVisible()
+  let body
+  await page.route('**/functions/v1/study-suggestions', (route) => { body = route.request().postDataJSON(); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ answer: 'Et atom har protoner.', grounded: true, citations: [{ passageId: body.search.passages[0].id, sourceTitle: 'Kapittel 1', index: 1 }] }) }) })
+  await page.getByRole('button', { name: 'Søk i kilder', exact: true }).first().click(); await page.locator('#ai-subject').selectOption('s'); await page.locator('#source-query').fill('Hva er et atom?'); await page.getByRole('button', { name: 'Søk i kilder', exact: true }).last().click()
+  expect(body.search.passages.reduce((n, x) => n + x.text.length, 0)).toBeLessThanOrEqual(12000); await expect(page.getByText('Kapittel 1 · avsnitt 1')).toBeVisible()
+})
+
+test('adaptiv quiz vurderer skrevet svar og lagrer feil forsøk', async ({ page }) => {
+  await aiPage(page, 'quiz')
+  const quizRequests = []
+  await page.route('**/functions/v1/study-suggestions', (route) => {
+    const body = route.request().postDataJSON()
+    if (body.tool === 'quiz') quizRequests.push(body)
+    const response = body.tool === 'feedback'
+      ? { verdict: 'partial', feedback: 'Forklar protonene også.' }
+      : { questions: Array.from({ length: 5 }, (_, i) => ({ question: `Spørsmål ${i + 1}`, answer: 'Fasit' })) }
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) })
+  })
+  await page.getByRole('button', { name: 'Lag øvingsspørsmål', exact: true }).click(); await page.locator('#ai-subject').selectOption('s'); await page.locator('#ai-source').fill('Atomer har protoner, nøytroner og elektroner i atommodellen.'); await page.getByRole('button', { name: 'Lag 5 spørsmål' }).click(); await page.getByLabel('Ditt svar på Spørsmål 1').fill('Elektroner'); await page.getByRole('button', { name: 'Vurder svar' }).first().click()
+  await expect(page.getByText('Forklar protonene også. (partial)')).toBeVisible(); await page.waitForTimeout(150); const stored = await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('oliarev-study-planner-v2')).map((key) => JSON.parse(localStorage.getItem(key))).flatMap((data) => data.quizAttempts || [])); expect(stored).toHaveLength(1); expect(stored[0].verdict).toBe('partial')
+  await page.getByRole('button', { name: 'Lag 5 spørsmål' }).click()
+  expect(quizRequests).toHaveLength(2)
+  expect(quizRequests[1].quiz.weakQuestions).toContain('Spørsmål 1')
+})
+
+test('oppsummering viser AI-resultat og repetisjonsspørsmål', async ({ page }) => {
+  await aiPage(page, 'summary')
+  await page.route('**/functions/v1/study-suggestions', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ summary: 'Kort oppsummering.', keyPoints: ['Viktig punkt'], keyConcepts: ['Atom'], reviewQuestions: [{ question: 'Hva er et atom?', answer: 'Grunnenhet' }] }) }))
+  await page.getByRole('button', { name: 'Oppsummer', exact: true }).click(); await page.locator('#ai-source').fill('Atomer er grunnenheter som inneholder protoner og elektroner.'); await page.getByRole('button', { name: 'Lag oppsummering' }).click(); await expect(page.getByText('Kort oppsummering.')).toBeVisible(); await expect(page.getByText('Atom', { exact: true })).toBeVisible(); await expect(page.getByText('Hva er et atom?')).toBeVisible()
+})
+
+test('ukerapport viser fullført, forfalt, kommende og anbefalt fokus', async ({ page }) => {
+  await aiPage(page, 'weekly')
+  await page.route('**/functions/v1/study-suggestions', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      summary: 'Kort status for studieuken.',
+      completed: ['Forelesning fullført'],
+      overdue: ['Arbeidskrav er forfalt'],
+      upcoming: ['Eksamen nærmer seg'],
+      focus: ['Prioriter arbeidskravet'],
+    }),
+  }))
+  await page.getByRole('button', { name: 'Ukerapport', exact: true }).click()
+  await page.getByRole('button', { name: 'Lag ukesrapport' }).click()
+  await expect(page.getByRole('heading', { name: 'Fullført denne uken' })).toBeVisible()
+  await expect(page.getByText('Arbeidskrav er forfalt')).toBeVisible()
+  await expect(page.getByText('Eksamen nærmer seg')).toBeVisible()
+  await expect(page.getByText('Prioriter arbeidskravet')).toBeVisible()
+})

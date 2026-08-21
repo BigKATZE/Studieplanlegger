@@ -128,3 +128,63 @@ export function applyWeekTemplate(template, week, existingLectures, createId, no
   }
   return newLectures
 }
+
+export function proposeReschedules(data, now = new Date()) {
+  const today = iso(now)
+  const exams = new Set((data.exams ?? []).map((item) => item.date).filter(Boolean))
+  const lectureCount = (data.lectures ?? []).reduce((map, lecture) => {
+    if (!localDate(lecture.date)) return map
+    map.set(lecture.date, (map.get(lecture.date) || 0) + 1)
+    return map
+  }, new Map())
+  const candidates = [
+    ...(data.assignments ?? [])
+      .filter((x) => x.status !== 'done' && localDate(x.deadline) && x.deadline < today)
+      .map((x) => ({ type: 'assignment', id: x.id, title: x.title, from: x.deadline })),
+    ...(data.reviews ?? [])
+      .filter((x) => localDate(x.nextReview) && x.nextReview < today)
+      .map((x) => ({ type: 'review', id: x.id, title: x.title, from: x.nextReview })),
+  ].sort((a, b) => a.from.localeCompare(b.from))
+  if (!candidates.length) return []
+  const nextSevenDays = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(now)
+    date.setHours(0, 0, 0, 0)
+    date.setDate(date.getDate() + index + 1)
+    return iso(date)
+  })
+  const nonExamDays = nextSevenDays.filter((date) => !exams.has(date))
+  const available = nonExamDays.length ? nonExamDays : nextSevenDays
+  const light = available.filter((date) => (lectureCount.get(date) || 0) < 3)
+  const heavy = available.filter((date) => (lectureCount.get(date) || 0) >= 3)
+  let pool = light.length >= candidates.length
+    ? light.slice(0, candidates.length)
+    : [...light, ...heavy].slice(0, candidates.length)
+  // ponytail: utvid 8..21 dager hvis for få lette dager, foretrekker lette → tunge → eksamensdager
+  if (pool.length < candidates.length) {
+    const extraLight = []
+    const extraHeavy = []
+    const extraExam = []
+    for (let offset = 8; offset <= 21 && extraLight.length + extraHeavy.length + extraExam.length + pool.length < candidates.length; offset++) {
+      const date = new Date(now)
+      date.setHours(0, 0, 0, 0)
+      date.setDate(date.getDate() + offset)
+      const ds = iso(date)
+      if (pool.includes(ds)) continue
+      if (exams.has(ds)) extraExam.push(ds)
+      else if ((lectureCount.get(ds) || 0) >= 3) extraHeavy.push(ds)
+      else extraLight.push(ds)
+    }
+    pool = [...pool, ...extraLight, ...extraHeavy, ...extraExam].slice(0, candidates.length)
+  }
+  // siste fallback hvis fortsatt tomt (alle dager har eksamen)
+  if (pool.length < candidates.length) {
+    for (let offset = 1; pool.length < candidates.length && offset <= 21; offset++) {
+      const date = new Date(now)
+      date.setHours(0, 0, 0, 0)
+      date.setDate(date.getDate() + offset)
+      const ds = iso(date)
+      if (!pool.includes(ds)) pool.push(ds)
+    }
+  }
+  return candidates.map((item, index) => ({ ...item, to: pool[index] }))
+}

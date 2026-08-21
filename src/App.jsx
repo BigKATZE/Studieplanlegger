@@ -21,6 +21,10 @@ import UpcomingAgenda from './components/UpcomingAgenda'
 import ReviewPlan from './components/ReviewPlan'
 import FocusMode from './components/FocusMode'
 import Changelog from './components/Changelog'
+import ReschedulePanel from './components/ReschedulePanel'
+import WorkPlans from './components/WorkPlans'
+import SharePlanModal from './components/SharePlanModal'
+import DeltArbeidsplan from './components/DeltArbeidsplan'
 import { advanceReview, applyWeekTemplate, createWeekTemplate, deferReview, findLectureConflictIds, makeReview } from './lib/plannerFeatures'
 
 const TABS = [
@@ -71,6 +75,8 @@ export default function App() {
   const [deleteAllStep, setDeleteAllStep] = useState(1)
   const [focusTarget, setFocusTarget] = useState(null)
   const [sharedToken] = useState(() => new URLSearchParams(window.location.search).get('del'))
+  const [planToken] = useState(() => new URLSearchParams(window.location.search).get('plan'))
+  const [sharePlan, setSharePlan] = useState(null)
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('planner-theme')
     if (saved) return saved
@@ -102,6 +108,7 @@ export default function App() {
   if (sharedToken) {
     return <DeltFag token={sharedToken} />
   }
+  if (planToken) return <DeltArbeidsplan token={planToken} />
 
   if (authStatus === 'loading') {
     return (
@@ -127,7 +134,7 @@ export default function App() {
   }
 
   const deleteAll = () => {
-    update(() => ({ subjects: [], lectures: [], assignments: [], exams: [], readings: [], reviews: [], weekTemplates: [] }))
+    update(() => ({ subjects: [], lectures: [], assignments: [], exams: [], readings: [], reviews: [], weekTemplates: [], aiSources: [], quizAttempts: [], workPlans: [] }))
     setUndo(null)
     setFilterSubjectId(null)
     setTimeplanWeek(null)
@@ -178,6 +185,19 @@ export default function App() {
       readings: [...d.readings, { id: uid(), ...r }],
     })),
     addReview: (review) => update((d) => ({ ...d, reviews: [...d.reviews, makeReview(review, new Date(), uid())] })),
+    addReviewUnique: (review) => update((d) => d.reviews.some((x) => x.subjectId === review.subjectId && x.title.trim().toLowerCase() === review.title.trim().toLowerCase()) ? d : ({ ...d, reviews: [...d.reviews, makeReview(review, new Date(), uid())] })),
+    addSource: (source) => update((d) => ({ ...d, aiSources: [...d.aiSources, { id: uid(), createdAt: new Date().toISOString(), ...source }] })),
+    removeSource: (id) => update((d) => ({ ...d, aiSources: d.aiSources.filter((x) => x.id !== id) })),
+    addQuizAttempt: (attempt) => update((d) => ({ ...d, quizAttempts: [...d.quizAttempts, { id: uid(), createdAt: new Date().toISOString(), ...attempt }] })),
+    saveWorkPlan: (plan) => update((d) => ({ ...d, workPlans: [...d.workPlans, { ...plan, id: uid(), createdAt: new Date().toISOString(), steps: plan.steps.map((step) => ({ ...step, id: uid(), completed: false })) }] })),
+    toggleWorkPlanStep: (planId, stepId) => update((d) => ({ ...d, workPlans: d.workPlans.map((plan) => plan.id === planId ? { ...plan, steps: plan.steps.map((step) => step.id === stepId ? { ...step, completed: !step.completed } : step) } : plan) })),
+    removeWorkPlan: (id) => update((d) => ({ ...d, workPlans: d.workPlans.filter((x) => x.id !== id) })),
+    applyReschedules: (items) => {
+      const prevAssignments = new Map(data.assignments.filter((a) => items.some((y) => y.type === 'assignment' && y.id === a.id)).map((a) => [a.id, a.deadline]))
+      const prevReviews = new Map(data.reviews.filter((r) => items.some((y) => y.type === 'review' && y.id === r.id)).map((r) => [r.id, r.nextReview]))
+      const label = items.length === 1 ? `Flyttet «${items[0].title}» til ${items[0].to}` : `Flyttet ${items.length} aktiviteter`
+      removeWithUndo(label, (d) => ({ ...d, assignments: d.assignments.map((x) => { const item = items.find((y) => y.type === 'assignment' && y.id === x.id); return item ? { ...x, deadline: item.to } : x }), reviews: d.reviews.map((x) => { const item = items.find((y) => y.type === 'review' && y.id === x.id); return item ? { ...x, nextReview: item.to } : x }) }), (d) => ({ ...d, assignments: d.assignments.map((x) => prevAssignments.has(x.id) ? { ...x, deadline: prevAssignments.get(x.id) } : x), reviews: d.reviews.map((x) => prevReviews.has(x.id) ? { ...x, nextReview: prevReviews.get(x.id) } : x) }))
+    },
     completeReview: (id) => update((d) => ({ ...d, reviews: d.reviews.map((review) => review.id === id ? advanceReview(review) : review) })),
     deferReview: (id) => update((d) => ({ ...d, reviews: d.reviews.map((review) => review.id === id ? deferReview(review) : review) })),
     removeReview: (id) => update((d) => ({ ...d, reviews: d.reviews.filter((review) => review.id !== id) })),
@@ -267,11 +287,21 @@ export default function App() {
     },
     toggleLecture: (lectureId) => update((d) => ({
       ...d,
-      lectures: d.lectures.map((l) => (l.id === lectureId ? { ...l, done: !l.done } : l)),
+      lectures: d.lectures.map((lecture) => {
+        if (lecture.id !== lectureId) return lecture
+        const done = !lecture.done
+        return { ...lecture, done, completedAt: done ? new Date().toISOString() : '' }
+      }),
     })),
     setAssignmentStatus: (id, status) => update((d) => ({
       ...d,
-      assignments: d.assignments.map((a) => (a.id === id ? { ...a, status } : a)),
+      assignments: d.assignments.map((assignment) => {
+        if (assignment.id !== id) return assignment
+        const completedAt = status === 'done'
+          ? (assignment.status === 'done' && assignment.completedAt ? assignment.completedAt : new Date().toISOString())
+          : ''
+        return { ...assignment, status, completedAt }
+      }),
     })),
     setLevel: (subjectId, level) => update((d) => ({
       ...d,
@@ -282,7 +312,7 @@ export default function App() {
       const removed = {
         subject,
         index: data.subjects.findIndex((s) => s.id === id),
-        items: Object.fromEntries(['lectures', 'assignments', 'exams', 'readings', 'reviews'].map((key) => [key, data[key].filter((x) => x.subjectId === id)])),
+        items: Object.fromEntries(['lectures', 'assignments', 'exams', 'readings', 'reviews', 'aiSources', 'quizAttempts', 'workPlans'].map((key) => [key, data[key].filter((x) => x.subjectId === id)])),
       }
       removeWithUndo(`Fjernet «${subject?.short ?? 'fag'}»`, (d) => ({
         ...d,
@@ -292,6 +322,9 @@ export default function App() {
         exams: d.exams.filter((e) => e.subjectId !== id),
         readings: d.readings.filter((r) => r.subjectId !== id),
         reviews: d.reviews.filter((r) => r.subjectId !== id),
+        aiSources: d.aiSources.filter((x) => x.subjectId !== id),
+        quizAttempts: d.quizAttempts.filter((x) => x.subjectId !== id),
+        workPlans: d.workPlans.filter((x) => x.subjectId !== id),
       }), (d) => restoreSubject(d, removed))
     },
     removeLecture: (id) => {
@@ -586,6 +619,7 @@ export default function App() {
               onFocus={setFocusTarget}
             />
             <ReviewPlan reviews={data.reviews} subjects={data.subjects} onAdd={actions.addReview} onComplete={actions.completeReview} onDefer={actions.deferReview} onRemove={actions.removeReview} />
+            <ReschedulePanel data={data} onApply={actions.applyReschedules} />
             <SubjectPanel
               subjects={data.subjects}
               lectures={data.lectures}
@@ -653,6 +687,7 @@ export default function App() {
               onRemoveAssignment={actions.removeAssignment}
               onEditAssignment={(a) => openEdit('assignment', a)}
             />
+            <WorkPlans plans={data.workPlans} subjects={data.subjects} onToggle={actions.toggleWorkPlanStep} onRemove={actions.removeWorkPlan} onShare={setSharePlan} canShare={Boolean(hasSupabase && user && user.id !== 'local')} />
           </>
         )}
 
@@ -671,7 +706,7 @@ export default function App() {
 
         {tab === 'ai' && (
           <Suspense fallback={<p role="status" className="mt-8 text-sm text-muted">Laster AI-verktøy…</p>}>
-            <AiTools data={data} enabled={Boolean(hasSupabase && user && user.id !== 'local')} onAddReview={actions.addReview} />
+            <AiTools data={data} enabled={Boolean(hasSupabase && user && user.id !== 'local')} onAddReview={actions.addReviewUnique} onAddSource={actions.addSource} onRemoveSource={actions.removeSource} onAddAttempt={actions.addQuizAttempt} onSaveWorkPlan={actions.saveWorkPlan} />
           </Suspense>
         )}
 
@@ -686,7 +721,7 @@ export default function App() {
               openModal('deleteAll')
             }}
             className="btn-danger"
-            disabled={!data.subjects.length && !data.lectures.length && !data.readings.length && !data.assignments.length && !data.exams.length && !data.reviews.length && !data.weekTemplates.length}
+            disabled={!data.subjects.length && !data.lectures.length && !data.readings.length && !data.assignments.length && !data.exams.length && !data.reviews.length && !data.weekTemplates.length && !data.aiSources.length && !data.quizAttempts.length && !data.workPlans.length}
           >
             Slett alt
           </button>
@@ -758,6 +793,7 @@ export default function App() {
       {shareSubject && user && (
         <ShareModal subject={shareSubject} userId={user.id} onClose={() => setShareSubject(null)} />
       )}
+      {sharePlan && <SharePlanModal plan={sharePlan} onClose={() => setSharePlan(null)} />}
 
       {focusTarget !== null && <FocusMode items={focusItems} initialTarget={focusTarget?.key} onClose={() => setFocusTarget(null)} onComplete={finishFocusItem} />}
 
