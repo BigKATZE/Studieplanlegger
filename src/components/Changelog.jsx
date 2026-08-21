@@ -1,5 +1,22 @@
 const RELEASES = [
   {
+    version: 'v1.2.3', date: '2026-08-22', dateLabel: '22. august 2026', title: 'Bedre mobilopplevelse', summary: 'Oversikt og AI-verktøy er justert for mindre skjermer.', groups: [
+      { title: 'Mobil', items: ['Fag- og fremdriftskortene tilpasser seg bedre på mobil og unngår horisontal scrolling.', 'AI-fanene ligger nå under hverandre på mobil, som resten av knapperadene.'] },
+    ],
+  },
+  {
+    version: 'v1.2.2', date: '2026-08-22', dateLabel: '22. august 2026', title: 'Chat med egne kilder', summary: 'Still oppfølgingsspørsmål til notatene dine uten å lime inn på nytt.', groups: [
+      { title: 'Nyhet', items: ['Ny fane «Chat med kilder» som husker siste 10 meldinger og svarer kun fra kildene dine med kildehenvisning.'] },
+      { title: 'Kildehåndtering', items: ['Samme avgrensede utdrag (maks 30/12 000 tegn) som i Søk i kilder.'] },
+    ],
+  },
+  {
+    version: 'v1.2.1', date: '2026-08-22', dateLabel: '22. august 2026', title: 'Små forbedringer i øving og arbeidsplan', summary: 'Mer stabil flyt ved generering av spørsmål, vurdering og arbeidsplaner.', groups: [
+      { title: 'Øving', items: ['Øvingsspørsmål vurderes nå samlet — alle svar sendes likt i én forespørsel.', 'Tomme felt blir automatisk “pass” og får tilbakemelding på hva som skulle stått.', 'Vanskelighetsgrad og antall spørsmål har fått mer robust validering.'] },
+      { title: 'Arbeidsplan', items: ['Detaljnivået «grundig» gir nå alltid 8–10 steg, med nytt forsøk ved avvik.', 'Innlogging og filopplasting har fått stabilitetsforbedringer.'] },
+    ],
+  },
+  {
     version: 'v1.2', date: '2026-08-21', dateLabel: '21. august 2026', title: 'AI-støtte som holder seg til planen og kildene dine', summary: 'Nye verktøy for øving, kildearbeid, eksamensøving, oppfølging og deling av arbeidsplaner.', groups: [
       { title: 'Øving og kilder', items: ['Private kilder kan lagres per fag og brukes i et avgrenset, kildehenvist AI-søk.', 'Øvingsspørsmål kan vurderes fra egne svar, og svake svar kan legges til repetisjon.', 'Lag sammendrag med hovedpunkter, begreper og spørsmål til repetisjon.', 'Eksamensøving har nedtelling og studiefeedback etter innlevering.', 'Eksamen og forelesninger flyttes ikke av omplanleggingsforslag.'] },
       { title: 'Plan og deling', items: ['Forslag til nye datoer må godkjennes før noe endres.', 'Arbeidsplaner kan lagres med avkryssbare steg.', 'Innloggede brukere kan dele en skrivebeskyttet arbeidsplan med en egen lenke.', 'Ukerapporten bygger på en begrenset oversikt over inneværende uke.'] },
