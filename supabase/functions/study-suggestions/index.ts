@@ -2,7 +2,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const MODEL = 'gemini-3.5-flash-lite'
 const DAILY_LIMIT = 25
-const MAX_BODY_BYTES = 50_000
+const MAX_BODY_BYTES = 100_000
 
 function corsHeaders(origin: string | null) {
   return {
@@ -20,7 +20,12 @@ function json(body: unknown, status: number, origin: string | null) {
   })
 }
 
-type Payload = { tool: 'breakdown' | 'quiz'; text: string; context: { subject?: string; assignment?: string } }
+type Payload = {
+  tool: 'breakdown' | 'quiz'
+  text: string
+  context: { subject?: string; assignment?: string }
+  quiz?: { difficulty: 'easy' | 'medium' | 'hard'; count: 3 | 5 | 10; previousQuestions: string[] }
+}
 
 function validPayload(value: unknown): value is Payload {
   if (!value || typeof value !== 'object') return false
@@ -28,8 +33,14 @@ function validPayload(value: unknown): value is Payload {
   if (payload.tool !== 'breakdown' && payload.tool !== 'quiz') return false
   if (typeof payload.text !== 'string' || payload.text.trim().length < 20 || payload.text.length > 20_000) return false
   if (!payload.context || typeof payload.context !== 'object' || Array.isArray(payload.context)) return false
-  return Object.entries(payload.context).every(([key, item]) =>
-    ['subject', 'assignment'].includes(key) && typeof item === 'string' && item.length <= 200)
+  if (!Object.entries(payload.context).every(([key, item]) =>
+    ['subject', 'assignment'].includes(key) && typeof item === 'string' && item.length <= 200)) return false
+  if (payload.tool === 'breakdown') return payload.quiz === undefined
+  if (!payload.quiz || typeof payload.quiz !== 'object' || Array.isArray(payload.quiz)) return false
+  const quiz = payload.quiz as Record<string, unknown>
+  return ['easy', 'medium', 'hard'].includes(quiz.difficulty as string) && [3, 5, 10].includes(quiz.count as number) &&
+    Array.isArray(quiz.previousQuestions) && quiz.previousQuestions.length <= 30 &&
+    quiz.previousQuestions.every((question) => typeof question === 'string' && question.length <= 500)
 }
 
 function requestFor(payload: Payload) {
@@ -53,15 +64,25 @@ function requestFor(payload: Payload) {
         },
         required: ['summary', 'steps'],
       },
+      maxOutputTokens: 1400,
     }
   }
+  const quiz = payload.quiz!
+  const difficulty = {
+    easy: 'Lett: bruk direkte gjenkalling og grunnleggende forståelse.',
+    medium: 'Middels: kombiner faktakunnskap, forklaring og enkel anvendelse.',
+    hard: 'Vanskelig: krev analyse, sammenligning og anvendelse på nye eksempler, men hold svaret forankret i teksten.',
+  }[quiz.difficulty]
+  const exclusions = quiz.previousQuestions.length
+    ? `Ikke gjenta eller omformuler noen av disse tidligere spørsmålene: ${JSON.stringify(quiz.previousQuestions)}.`
+    : ''
   return {
-    prompt: `Lag nøyaktig fem øvingsspørsmål med fasit på norsk bokmål. Bruk bare kildeteksten, og fordel spørsmålene mellom faktakunnskap, forklaring og anvendelse. Svarene skal være korte, presise og kunne begrunnes direkte i teksten. Ikke finn på opplysninger. ${untrusted}\nKontekst: ${context}\nKildetekst:\n${payload.text}`,
+    prompt: `Lag nøyaktig ${quiz.count} øvingsspørsmål med fasit på norsk bokmål. ${difficulty} Bruk bare kildeteksten. Svarene skal være korte, presise og kunne begrunnes direkte i teksten. Ikke finn på opplysninger. ${exclusions} ${untrusted}\nKontekst: ${context}\nKildetekst:\n${payload.text}`,
     schema: {
       type: 'OBJECT',
       properties: {
         questions: {
-          type: 'ARRAY', minItems: 5, maxItems: 5,
+          type: 'ARRAY', minItems: quiz.count, maxItems: quiz.count,
           items: {
             type: 'OBJECT',
             properties: { question: { type: 'STRING' }, answer: { type: 'STRING' } },
@@ -71,17 +92,18 @@ function requestFor(payload: Payload) {
       },
       required: ['questions'],
     },
+    maxOutputTokens: quiz.count === 10 ? 2600 : 1800,
   }
 }
 
-function validResult(tool: Payload['tool'], result: unknown) {
+function validResult(payload: Payload, result: unknown) {
   if (!result || typeof result !== 'object') return false
   const value = result as Record<string, unknown>
-  if (tool === 'breakdown') {
+  if (payload.tool === 'breakdown') {
     return typeof value.summary === 'string' && value.summary.length <= 1000 && Array.isArray(value.steps) &&
       value.steps.length >= 4 && value.steps.length <= 8 && value.steps.every((step) => validFields(step, ['title', 'description']))
   }
-  return Array.isArray(value.questions) && value.questions.length === 5 &&
+  return Array.isArray(value.questions) && value.questions.length === payload.quiz!.count &&
     value.questions.every((question) => validFields(question, ['question', 'answer']))
 }
 
@@ -137,7 +159,7 @@ Deno.serve(async (req) => {
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify({
         contents: [{ parts: [{ text: request.prompt }] }],
-        generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 1400, responseSchema: request.schema },
+        generationConfig: { responseMimeType: 'application/json', maxOutputTokens: request.maxOutputTokens, responseSchema: request.schema },
       }),
     })
     if (!response.ok) {
@@ -147,7 +169,7 @@ Deno.serve(async (req) => {
     const gemini = await response.json()
     const text = gemini.candidates?.[0]?.content?.parts?.[0]?.text
     const result = text && JSON.parse(text)
-    if (!validResult(payload.tool, result)) return json({ error: 'AI-tjenesten ga et ugyldig svar.' }, 502, origin)
+    if (!validResult(payload, result)) return json({ error: 'AI-tjenesten ga et ugyldig svar.' }, 502, origin)
     return json(result, 200, origin)
   } catch (error) {
     console.error('Gemini request:', error)

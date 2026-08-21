@@ -10,4 +10,14 @@ assert.deepEqual(buildAiRequest('breakdown', '  Oppgavetekst  ', {
   context: { subject: 'JUS2010' },
 })
 
-assert.equal(buildAiRequest('quiz', 'x'.repeat(21_000)).text.length, 20_000)
+const quiz = buildAiRequest('quiz', 'x'.repeat(21_000), {}, {
+  difficulty: 'hard',
+  count: 10,
+  previousQuestions: [' Første spørsmål? ', 'Andre spørsmål?'],
+})
+assert.equal(quiz.text.length, 20_000)
+assert.deepEqual(quiz.quiz, {
+  difficulty: 'hard',
+  count: 10,
+  previousQuestions: ['Første spørsmål?', 'Andre spørsmål?'],
+})

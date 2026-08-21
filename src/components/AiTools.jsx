@@ -11,6 +11,10 @@ export default function AiTools({ data, enabled }) {
   const [text, setText] = useState('')
   const [assignmentId, setAssignmentId] = useState('')
   const [subjectId, setSubjectId] = useState('')
+  const [difficulty, setDifficulty] = useState('medium')
+  const [questionCount, setQuestionCount] = useState(5)
+  const [avoidPrevious, setAvoidPrevious] = useState(true)
+  const [previousQuestions, setPreviousQuestions] = useState([])
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -37,6 +41,10 @@ export default function AiTools({ data, enabled }) {
       body: buildAiRequest(tool, text, {
         subject: subject && subjectLabel(subject),
         assignment: assignment?.title,
+      }, {
+        difficulty,
+        count: questionCount,
+        previousQuestions: avoidPrevious ? previousQuestions : [],
       }),
     })
     if (invokeError) {
@@ -50,6 +58,9 @@ export default function AiTools({ data, enabled }) {
       setError(message)
     } else {
       setResult(response)
+      if (tool === 'quiz') {
+        setPreviousQuestions((previous) => [...previous, ...response.questions.map((item) => item.question)].slice(-30))
+      }
     }
     setLoading(false)
   }
@@ -93,6 +104,29 @@ export default function AiTools({ data, enabled }) {
                 <option value="">Ikke velg fag</option>
                 {data.subjects.map((subject) => <option key={subject.id} value={subject.id}>{subjectLabel(subject)}</option>)}
               </select>
+              <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label htmlFor="ai-difficulty" className="block text-sm font-medium">Vanskelighetsgrad</label>
+                  <select id="ai-difficulty" value={difficulty} onChange={(event) => setDifficulty(event.target.value)} className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm">
+                    <option value="easy">Lett</option>
+                    <option value="medium">Middels</option>
+                    <option value="hard">Vanskelig</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="ai-question-count" className="block text-sm font-medium">Antall spørsmål</label>
+                  <select id="ai-question-count" value={questionCount} onChange={(event) => setQuestionCount(Number(event.target.value))} className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm">
+                    {[3, 5, 10].map((count) => <option key={count} value={count}>{count}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <span className="block text-sm font-medium">Tidligere spørsmål</span>
+                  <button type="button" aria-pressed={avoidPrevious} onClick={() => setAvoidPrevious((value) => !value)} className={`mt-1 w-full rounded-md border px-3 py-2 text-sm font-medium ${avoidPrevious ? 'border-primary bg-primary text-white' : 'border-line bg-surface text-ink'}`}>
+                    {avoidPrevious ? 'Ikke gjenta tidligere' : 'Tidligere kan gjentas'}
+                  </button>
+                </div>
+              </div>
+              {previousQuestions.length > 0 && <p className="mt-2 text-xs text-muted">{previousQuestions.length} tidligere spørsmål i denne økten.</p>}
               <label htmlFor="ai-source" className="mt-4 block text-sm font-medium">Notater eller pensumtekst</label>
               <p className="mt-1 text-xs text-muted">Spørsmål og svar lages kun fra teksten du limer inn.</p>
             </>
@@ -100,7 +134,7 @@ export default function AiTools({ data, enabled }) {
           <textarea id="ai-source" value={text} onChange={(event) => setText(event.target.value)} maxLength={20_000} rows={10} className="mt-2 w-full rounded-md border border-line bg-paper px-3 py-2 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20" placeholder={tool === 'breakdown' ? 'Lim inn oppgaveteksten her…' : 'Lim inn notater eller pensumtekst her…'} />
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs text-muted">{text.length.toLocaleString('nb-NO')} / 20 000 tegn</span>
-            <button type="submit" disabled={loading} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">{loading ? 'Arbeider…' : tool === 'breakdown' ? 'Lag arbeidsplan' : 'Lag 5 spørsmål'}</button>
+            <button type="submit" disabled={loading} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">{loading ? 'Arbeider…' : tool === 'breakdown' ? 'Lag arbeidsplan' : `Lag ${questionCount} spørsmål`}</button>
           </div>
           {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
         </form>

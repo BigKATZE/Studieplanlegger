@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { uid, pickSubjectColor } from './lib/store'
 import { fmtShort, iso, isoWeek } from './lib/date'
 import { useAuth, useStore } from './lib/sync'
@@ -17,7 +17,6 @@ import ShareModal from './components/ShareModal'
 import DeltFag from './components/DeltFag'
 import { Modal, SubjectForm, LectureForm, AssignmentForm, ExamForm, ReadingForm } from './components/Modals'
 import { DeadlineStrip, SubjectFilter } from './components/ui'
-import AiTools from './components/AiTools'
 
 const TABS = [
   { id: 'overview', label: 'Oversikt' },
@@ -27,6 +26,7 @@ const TABS = [
   { id: 'exams', label: 'Eksamener' },
   { id: 'ai', label: 'AI' },
 ]
+const AiTools = lazy(() => import('./components/AiTools'))
 
 function addMinutes(time, mins) {
   const [h, m] = time.split(':').map(Number)
@@ -540,7 +540,11 @@ export default function App() {
           </>
         )}
 
-        {tab === 'ai' && <AiTools data={data} enabled={Boolean(hasSupabase && user && user.id !== 'local')} />}
+        {tab === 'ai' && (
+          <Suspense fallback={<p role="status" className="mt-8 text-sm text-muted">Laster AI-verktøy…</p>}>
+            <AiTools data={data} enabled={Boolean(hasSupabase && user && user.id !== 'local')} />
+          </Suspense>
+        )}
       </main>
 
       {modal === 'subject' && (
