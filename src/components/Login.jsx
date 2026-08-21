@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const inputCls =
   'w-full rounded-md border border-line bg-surface px-3 py-2 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20'
+
+const turnstileSitekey = import.meta.env.VITE_TURNSTILE_SITEKEY || ''
 
 export default function Login({ onBack }) {
   const [mode, setMode] = useState('login')
@@ -11,6 +13,35 @@ export default function Login({ onBack }) {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [busy, setBusy] = useState(false)
+  const [captchaToken, setCaptchaToken] = useState('')
+  const widgetRef = useRef(null)
+
+  useEffect(() => {
+    if (!turnstileSitekey || !widgetRef.current) return
+    let widgetId
+    const script = document.createElement('script')
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+    script.async = true
+    script.defer = true
+    document.head.appendChild(script)
+    const render = () => {
+      if (window.turnstile && widgetRef.current) {
+        widgetId = window.turnstile.render(widgetRef.current, {
+          sitekey: turnstileSitekey,
+          callback: (token) => setCaptchaToken(token),
+          'expired-callback': () => setCaptchaToken(''),
+          'error-callback': () => setCaptchaToken(''),
+        })
+      } else {
+        setTimeout(render, 400)
+      }
+    }
+    script.onload = render
+    return () => {
+      try { if (widgetId != null && window.turnstile) window.turnstile.remove(widgetId) } catch {}
+      script.remove()
+    }
+  }, [])
 
   const submit = async (e) => {
     e.preventDefault()
@@ -18,18 +49,22 @@ export default function Login({ onBack }) {
     setError('')
     setInfo('')
     if (mode === 'login') {
-      const { error: err } = await supabase.auth.signInWithPassword({ email, password })
+      const { error: err } = await supabase.auth.signInWithPassword({ email, password, options: captchaToken ? { captchaToken } : undefined })
       setBusy(false)
       if (err) setError(err.message)
+      if (window.turnstile && widgetRef.current) try { window.turnstile.reset(widgetRef.current) } catch {}
+      setCaptchaToken('')
       return
     }
-    const { data, error: err } = await supabase.auth.signUp({ email, password })
+    const { data, error: err } = await supabase.auth.signUp({ email, password, options: captchaToken ? { captchaToken } : undefined })
     setBusy(false)
     if (err) {
       setError(err.message)
     } else if (!data.session) {
       setInfo('Konto opprettet! Sjekk e-posten din for å bekrefte kontoen før du logger inn.')
     }
+    if (window.turnstile && widgetRef.current) try { window.turnstile.reset(widgetRef.current) } catch {}
+    setCaptchaToken('')
   }
 
   const forgotPassword = async () => {
@@ -42,10 +77,13 @@ export default function Login({ onBack }) {
     setInfo('')
     const { error: err } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: window.location.origin,
+      captchaToken: captchaToken || undefined,
     })
     setBusy(false)
     if (err) setError(err.message)
     else setInfo('Sjekk innboksen din - vi har sendt en lenke for å tilbakestille passordet.')
+    if (window.turnstile && widgetRef.current) try { window.turnstile.reset(widgetRef.current) } catch {}
+    setCaptchaToken('')
   }
 
   return (
@@ -80,6 +118,11 @@ export default function Login({ onBack }) {
               className={inputCls}
             />
           </label>
+          {turnstileSitekey ? (
+            <div ref={widgetRef} className="flex justify-center" aria-label="Bot-beskyttelse" />
+          ) : (
+            <p className="text-xs text-muted">Bot-beskyttelse ikke konfigurert — sett VITE_TURNSTILE_SITEKEY i Vercel/Supabase for å skru på.</p>
+          )}
           {mode === 'login' && (
             <button
               type="button"

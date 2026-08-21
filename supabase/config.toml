@@ -210,11 +210,12 @@ token_verifications = 30
 # Number of Web3 logins that can be made in a 5 minute interval per IP address.
 web3 = 30
 
-# Configure one of the supported captcha providers: `hcaptcha`, `turnstile`.
-# [auth.captcha]
-# enabled = true
-# provider = "hcaptcha"
-# secret = ""
+# Bot-beskyttelse for innlogging/registrering – gratis via Cloudflare Turnstile.
+# Sett TURNSTILE_SECRET i Supabase Dashboard (Auth → Security) og VITE_TURNSTILE_SITEKEY i Vercel.
+[auth.captcha]
+enabled = true
+provider = "turnstile"
+secret = "env(TURNSTILE_SECRET)"
 
 [auth.email]
 # Allow/disallow new user signups via email to your project.
