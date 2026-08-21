@@ -282,11 +282,11 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
         <p className="mt-1 text-sm text-muted">Innholdet brukes bare til å lage svaret og lagres ikke i studieplanen.</p>
       </div>
 
-      <div className="mt-5 flex flex-wrap gap-1 rounded-lg border border-line bg-surface p-1">
+      <div className="mt-5 grid grid-cols-1 gap-1 rounded-lg border border-line bg-surface p-1 sm:flex sm:flex-wrap">
         {[
           ['breakdown', 'Bryt ned arbeidskrav'], ['quiz', 'Lag øvingsspørsmål'], ['exam', 'Eksamensøving'], ['summary', 'Oppsummer'], ['source-search', 'Søk i kilder'], ['source-chat', 'Chat med kilder'], ['weekly-report', 'Ukerapport'],
         ].map(([value, label]) => (
-          <button key={value} type="button" onClick={() => selectTool(value)} className={`flex-1 rounded-md px-3 py-2 text-sm font-medium sm:flex-none ${tool === value ? 'bg-primary text-white' : 'text-muted hover:text-ink'}`}>
+          <button key={value} type="button" onClick={() => selectTool(value)} className={`w-full rounded-md px-3 py-2 text-sm font-medium sm:w-auto sm:flex-none ${tool === value ? 'bg-primary text-white' : 'text-muted hover:text-ink'}`}>
             {label}
           </button>
         ))}

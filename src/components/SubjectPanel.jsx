@@ -34,17 +34,17 @@ export default function SubjectPanel({ subjects, lectures, readings, assignments
         <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Fag &amp; fremdrift</h2>
         <WeekFilter weeks={weeks} active={week} onChange={setWeek} />
       </div>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {subjects.map((s) => {
           const st = stats.get(s.id)
           const level = s.levelOverride ?? overallLevels.get(s.id)
           return (
-            <div key={s.id} className="app-surface p-4">
-              <div className="flex items-center justify-between gap-2">
-                <span className="chip subject-chip" style={{ '--subject-color': s.color || '#146c54' }}>
+            <div key={s.id} className="app-surface min-w-0 overflow-hidden p-3 sm:p-4">
+              <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                <span className="chip subject-chip min-w-0 max-w-full truncate" style={{ '--subject-color': s.color || '#146c54' }}>
                   {s.short || s.name}
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-2">
                   <span className="font-mono text-xs text-muted">{s.code}</span>
                   {canShare && (
                     <button
@@ -78,15 +78,15 @@ export default function SubjectPanel({ subjects, lectures, readings, assignments
               </div>
               {st.totalRead === 0 && <p className="mt-2 text-xs text-warning">Mangler pensum{week == null ? '' : ` i uke ${week}`}.</p>}
               <UpcomingDeadline subjectId={s.id} assignments={assignments} exams={exams} />
-              <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-line pt-3">
                 <span className="text-xs text-muted">Kunnskapsnivå</span>
-                <div className="flex items-center gap-2">
+                <div className="flex min-w-0 items-center gap-2">
                   <span className="text-sm font-semibold">{level ? `${level}/5` : '-'}</span>
                   <Select
                     value={String(s.levelOverride ?? '')}
                     onChange={(v) => onSetLevel(s.id, v === '' ? null : Number(v))}
                     options={[{ value: '', label: 'Auto' }, ...[1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: String(n) }))]}
-                    className="w-auto"
+                    className="w-auto min-w-0"
                     ariaLabel={`Nivå for ${s.short}`}
                   />
                 </div>
