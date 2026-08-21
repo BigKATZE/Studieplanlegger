@@ -15,31 +15,38 @@ export default function Login({ onBack }) {
   const [busy, setBusy] = useState(false)
   const [captchaToken, setCaptchaToken] = useState('')
   const widgetRef = useRef(null)
+  const widgetIdRef = useRef(null)
 
   useEffect(() => {
-    if (!turnstileSitekey || !widgetRef.current) return
+    if (!turnstileSitekey) return
     let widgetId
-    const script = document.createElement('script')
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
-    script.async = true
-    script.defer = true
-    document.head.appendChild(script)
+    const existing = document.querySelector('script[src="https://challenges.cloudflare.com/turnstile/v0/api.js"]')
+    const script = existing || document.createElement('script')
+    if (!existing) {
+      script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+      script.async = true
+      script.defer = true
+      document.head.appendChild(script)
+    }
     const render = () => {
       if (window.turnstile && widgetRef.current) {
+        try { if (widgetId != null) window.turnstile.remove(widgetId) } catch {}
         widgetId = window.turnstile.render(widgetRef.current, {
           sitekey: turnstileSitekey,
           callback: (token) => setCaptchaToken(token),
           'expired-callback': () => setCaptchaToken(''),
           'error-callback': () => setCaptchaToken(''),
         })
+        widgetIdRef.current = widgetId
       } else {
         setTimeout(render, 400)
       }
     }
-    script.onload = render
+    if (existing && window.turnstile) render()
+    else script.onload = render
     return () => {
       try { if (widgetId != null && window.turnstile) window.turnstile.remove(widgetId) } catch {}
-      script.remove()
+      if (!existing) script.remove()
     }
   }, [])
 
@@ -52,7 +59,7 @@ export default function Login({ onBack }) {
       const { error: err } = await supabase.auth.signInWithPassword({ email, password, options: captchaToken ? { captchaToken } : undefined })
       setBusy(false)
       if (err) setError(err.message)
-      if (window.turnstile && widgetRef.current) try { window.turnstile.reset(widgetRef.current) } catch {}
+      try { if (window.turnstile) window.turnstile.reset(widgetIdRef.current ?? undefined) } catch {}
       setCaptchaToken('')
       return
     }
@@ -63,7 +70,7 @@ export default function Login({ onBack }) {
     } else if (!data.session) {
       setInfo('Konto opprettet! Sjekk e-posten din for å bekrefte kontoen før du logger inn.')
     }
-    if (window.turnstile && widgetRef.current) try { window.turnstile.reset(widgetRef.current) } catch {}
+    try { if (window.turnstile) window.turnstile.reset(widgetIdRef.current ?? undefined) } catch {}
     setCaptchaToken('')
   }
 
@@ -82,7 +89,7 @@ export default function Login({ onBack }) {
     setBusy(false)
     if (err) setError(err.message)
     else setInfo('Sjekk innboksen din - vi har sendt en lenke for å tilbakestille passordet.')
-    if (window.turnstile && widgetRef.current) try { window.turnstile.reset(widgetRef.current) } catch {}
+    try { if (window.turnstile) window.turnstile.reset(widgetIdRef.current ?? undefined) } catch {}
     setCaptchaToken('')
   }
 
