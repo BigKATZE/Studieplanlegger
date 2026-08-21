@@ -466,16 +466,6 @@ export default function App() {
             {{ local: 'Lagret lokalt', loading: 'Kobler til…', saving: 'Lagrer…', saved: 'Synkronisert', conflict: 'Oppdatert fra annen enhet', error: 'Synkfeil' }[syncStatus]}
           </span>
           <button
-            type="button"
-            onClick={() => setTab('changelog')}
-            aria-current={tab === 'changelog' ? 'page' : undefined}
-            className={`min-h-10 rounded-[10px] px-2 text-sm transition-colors hover:bg-surface hover:text-ink ${
-              tab === 'changelog' ? 'font-semibold text-primary' : 'text-muted'
-            }`}
-          >
-            Changelog
-          </button>
-          <button
             onClick={() => setSearchOpen(true)}
             aria-label="Søk (Ctrl+K)"
             title="Søk (Ctrl+K)"
@@ -500,6 +490,16 @@ export default function App() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75 9.75 9.75 0 0 1 8.25 6c0-1.33.266-2.597.748-3.752A9.75 9.75 0 0 0 3 11.25 9.75 9.75 0 0 0 12.75 21a9.75 9.75 0 0 0 9.002-5.998Z" />
               </svg>
             )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab('changelog')}
+            aria-current={tab === 'changelog' ? 'page' : undefined}
+            className={`min-h-10 rounded-[10px] px-2 text-sm transition-colors hover:bg-surface hover:text-ink ${
+              tab === 'changelog' ? 'font-semibold text-primary' : 'text-muted'
+            }`}
+          >
+            Changelog
           </button>
           {hasSupabase && !user && (
             <button
