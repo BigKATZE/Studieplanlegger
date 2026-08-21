@@ -1,5 +1,8 @@
 function unfold(text) {
-  return text.split(/\r?\n/).reduce((acc, line) => {
+  if (text.length > 2 * 1024 * 1024) throw new Error('iCal-filen er for stor')
+  const raw = text.split(/\r?\n/)
+  if (raw.length > 20_000) throw new Error('iCal-filen har for mange linjer')
+  return raw.reduce((acc, line) => {
     if (line.startsWith(' ') || line.startsWith('\t')) acc[acc.length - 1] += line.slice(1)
     else acc.push(line)
     return acc
@@ -18,6 +21,7 @@ function icsDateTime(value, prop) {
   const date = z
     ? new Date(Date.UTC(+y, +mo - 1, +d, +(h || 0), +(mi || 0), +(s || 0)))
     : new Date(+y, +mo - 1, +d, +(h || 0), +(mi || 0), +(s || 0))
+  if (Number.isNaN(date.getTime())) return { date: null, time: '' }
   return {
     date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
     time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`,
@@ -48,7 +52,10 @@ export function parseIcs(text) {
       continue
     }
     if (upper.startsWith('END:VEVENT')) {
-      if (ev && ev.title && ev.date) events.push({ title: ev.title, date: ev.date, time: ev.time ?? '', room: ev.room ?? '' })
+      if (ev && ev.title && ev.date) {
+        if (events.length >= 1000) throw new Error('For mange hendelser i iCal-filen (maks 1000)')
+        events.push({ title: String(ev.title).slice(0, 500), date: ev.date, time: ev.time ?? '', room: String(ev.room ?? '').slice(0, 500) })
+      }
       ev = null
       continue
     }
@@ -58,8 +65,8 @@ export function parseIcs(text) {
     const prop = line.slice(0, idx)
     const value = line.slice(idx + 1)
     const name = prop.split(';')[0].toUpperCase()
-    if (name === 'SUMMARY') ev.title = icsText(value.trim())
-    else if (name === 'LOCATION') ev.room = icsText(value.trim())
+    if (name === 'SUMMARY') ev.title = icsText(value.trim()).slice(0, 500)
+    else if (name === 'LOCATION') ev.room = icsText(value.trim()).slice(0, 500)
     else if (name === 'DTSTART') {
       const start = icsDateTime(value, prop)
       ev.date = start.date

@@ -90,8 +90,82 @@ function normalizeWorkPlan(item) {
   return { id: cleanText(item.id, 128), assignmentId: cleanText(item.assignmentId, 128), subjectId: cleanText(item.subjectId, 128), title: cleanText(item.title, 300), summary: cleanText(item.summary), requirements: Array.isArray(item.requirements) ? item.requirements.map((x) => cleanText(x, 500)).filter(Boolean).slice(0, 15) : [], steps, clarifications: Array.isArray(item.clarifications) ? item.clarifications.map((x) => cleanText(x, 500)).filter(Boolean).slice(0, 10) : [], createdAt: cleanText(item.createdAt, 80) }
 }
 
+const ALLOWED_BACKUP_KEYS = ['subjects', 'lectures', 'assignments', 'exams', 'readings', 'reviews', 'weekTemplates', 'aiSources', 'quizAttempts', 'workPlans']
+const FORBIDDEN_KEYS = ['__proto__', 'constructor', 'prototype']
+
+function sanitizePlannerString(value, max) {
+  return cleanText(value, max)
+}
+
+function normalizeSubject(item) {
+  if (!isRecord(item) || !cleanText(item.id, 128)) return null
+  return {
+    id: cleanText(item.id, 128),
+    code: sanitizePlannerString(item.code, 200),
+    name: sanitizePlannerString(item.name, 300),
+    short: sanitizePlannerString(item.short, 100),
+    color: typeof item.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(item.color) ? item.color : SUBJECT_COLORS[0],
+    levelOverride: item.levelOverride ?? null,
+  }
+}
+function normalizeLecture(item) {
+  if (!isRecord(item) || !cleanText(item.id, 128)) return null
+  const chapters = Array.isArray(item.chapters) ? item.chapters.filter(isRecord).filter((chapter) => typeof chapter.text === 'string' && chapter.text.trim()).map((chapter) => ({ id: cleanText(chapter.id, 128), text: sanitizePlannerString(chapter.text, 2000), done: Boolean(chapter.done) })).slice(0, 50) : []
+  return {
+    id: cleanText(item.id, 128),
+    subjectId: cleanText(item.subjectId, 128),
+    date: typeof item.date === 'string' && validIsoDate(item.date) ? item.date : '',
+    start: typeof item.start === 'string' ? cleanText(item.start, 10) : '',
+    end: typeof item.end === 'string' ? cleanText(item.end, 10) : '',
+    room: sanitizePlannerString(item.room, 200),
+    lecturer: sanitizePlannerString(item.lecturer, 300),
+    topic: sanitizePlannerString(item.topic, 500),
+    chapters,
+    done: Boolean(item.done),
+    completedAt: cleanText(item.completedAt, 80),
+    createdAt: cleanText(item.createdAt, 80),
+  }
+}
+function normalizeAssignment(item) {
+  if (!isRecord(item) || !cleanText(item.id, 128)) return null
+  return {
+    id: cleanText(item.id, 128),
+    subjectId: cleanText(item.subjectId, 128),
+    title: sanitizePlannerString(item.title, 500),
+    deadline: typeof item.deadline === 'string' && validIsoDate(item.deadline) ? item.deadline : '',
+    status: ['not_started', 'in_progress', 'done'].includes(item.status) ? item.status : 'not_started',
+    completedAt: cleanText(item.completedAt, 80),
+    createdAt: cleanText(item.createdAt, 80),
+  }
+}
+function normalizeExam(item) {
+  if (!isRecord(item) || !cleanText(item.id, 128)) return null
+  return {
+    id: cleanText(item.id, 128),
+    subjectId: cleanText(item.subjectId, 128),
+    title: sanitizePlannerString(item.title, 500),
+    date: typeof item.date === 'string' && validIsoDate(item.date) ? item.date : '',
+    time: typeof item.time === 'string' ? cleanText(item.time, 10) : '',
+    createdAt: cleanText(item.createdAt, 80),
+  }
+}
+function normalizeReading(item) {
+  if (!isRecord(item) || !cleanText(item.id, 128)) return null
+  const chapters = Array.isArray(item.chapters) ? item.chapters.filter(isRecord).filter((chapter) => typeof chapter.text === 'string' && chapter.text.trim()).map((chapter) => ({ id: cleanText(chapter.id, 128), text: sanitizePlannerString(chapter.text, 2000), done: Boolean(chapter.done) })).slice(0, 50) : []
+  return {
+    id: cleanText(item.id, 128),
+    subjectId: cleanText(item.subjectId, 128),
+    title: sanitizePlannerString(item.title, 500),
+    week: Number.isInteger(item.week) && item.week >= 1 && item.week <= 53 ? item.week : null,
+    done: Boolean(item.done),
+    chapters,
+    createdAt: cleanText(item.createdAt, 80),
+  }
+}
+
 export function normalizePlannerData(data) {
   if (!isRecord(data)) return { ...EMPTY_DATA }
+  if (FORBIDDEN_KEYS.some((key) => Object.prototype.hasOwnProperty.call(data, key))) return { ...EMPTY_DATA }
   const unique = (items) => {
     const ids = new Set()
     return items.filter((item) => {
@@ -101,12 +175,11 @@ export function normalizePlannerData(data) {
     })
   }
   return {
-    ...data,
-    subjects: Array.isArray(data.subjects) ? data.subjects : [],
-    lectures: Array.isArray(data.lectures) ? data.lectures : [],
-    assignments: Array.isArray(data.assignments) ? data.assignments : [],
-    exams: Array.isArray(data.exams) ? data.exams : [],
-    readings: (Array.isArray(data.readings) ? data.readings : []).map((reading) => ({ ...reading, chapters: Array.isArray(reading?.chapters) ? reading.chapters : [] })),
+    subjects: unique((Array.isArray(data.subjects) ? data.subjects : []).map(normalizeSubject).filter(Boolean)),
+    lectures: unique((Array.isArray(data.lectures) ? data.lectures : []).map(normalizeLecture).filter(Boolean)),
+    assignments: unique((Array.isArray(data.assignments) ? data.assignments : []).map(normalizeAssignment).filter(Boolean)),
+    exams: unique((Array.isArray(data.exams) ? data.exams : []).map(normalizeExam).filter(Boolean)),
+    readings: unique((Array.isArray(data.readings) ? data.readings : []).map(normalizeReading).filter(Boolean)),
     reviews: unique((Array.isArray(data.reviews) ? data.reviews : []).map(normalizeReview)),
     weekTemplates: unique((Array.isArray(data.weekTemplates) ? data.weekTemplates : []).map(normalizeWeekTemplate)),
     aiSources: unique((Array.isArray(data.aiSources) ? data.aiSources : []).map(normalizeSource)).slice(0, 25),
@@ -117,7 +190,9 @@ export function normalizePlannerData(data) {
 
 export function isValidBackupData(data) {
   if (!isRecord(data) || !Array.isArray(data.subjects) || !Array.isArray(data.lectures)) return false
-  return ['assignments', 'exams', 'readings', 'reviews', 'weekTemplates', 'aiSources', 'quizAttempts', 'workPlans'].every((key) => !(key in data) || Array.isArray(data[key]))
+  if (Object.keys(data).some((key) => FORBIDDEN_KEYS.includes(key) || !ALLOWED_BACKUP_KEYS.includes(key))) return false
+  if (ALLOWED_BACKUP_KEYS.some((key) => Array.isArray(data[key]) && data[key].length > 10000)) return false
+  return ALLOWED_BACKUP_KEYS.every((key) => !(key in data) || Array.isArray(data[key]))
 }
 
 export function load() {

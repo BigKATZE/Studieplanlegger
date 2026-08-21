@@ -53,9 +53,22 @@ function isPrivateIp(ip: string): boolean {
     if (a === 172 && b >= 16 && b <= 31) return true // 172.16/12
     if (a === 192 && b === 168) return true // 192.168/16
     if (a === 169 && b === 254) return true // link-local (inkl. sky-metadata 169.254.169.254)
+    if (a === 100 && b >= 64 && b <= 127) return true // CGNAT 100.64/10
     return false
   }
   const low = ip.toLowerCase()
+  // håndter IPv4-mappet IPv6 ::ffff:127.0.0.1
+  const mapped = low.startsWith('::ffff:') ? low.slice(7) : low
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(mapped)) {
+    const parts = mapped.split('.').map(Number)
+    const a = parts[0]; const b = parts[1]
+    if (a === 127 || a === 10 || a === 0) return true
+    if (a === 172 && b >= 16 && b <= 31) return true
+    if (a === 192 && b === 168) return true
+    if (a === 169 && b === 254) return true
+    if (a === 100 && b >= 64 && b <= 127) return true
+    return false
+  }
   if (low === '::1') return true // loopback
   if (low.startsWith('fe80:')) return true // link-local
   if (low.startsWith('fc') || low.startsWith('fd')) return true // unique local
@@ -65,7 +78,13 @@ function isPrivateIp(ip: string): boolean {
 async function isBlockedTarget(hostname: string): Promise<boolean> {
   const lower = hostname.toLowerCase()
   if (lower === 'localhost' || lower.endsWith('.local') || lower.endsWith('.internal')) return true
+  if (lower.includes(':')) {
+    // IPv6 literal uten brackets – sjekk direkte
+    if (isPrivateIp(lower)) return true
+  }
   if (/^\d+\.\d+\.\d+\.\d+$/.test(lower)) return isPrivateIp(lower)
+  // avvis userinfo-smugling: hostname skal ikke inneholde @, men sjekk også at lower ikke er tom
+  if (!lower || lower.includes('@') || lower.includes('..')) return true
   try {
     const [a, aaaa] = await Promise.all([
       Deno.resolveDns(hostname, 'A').catch(() => []),
@@ -132,6 +151,8 @@ Deno.serve(async (req) => {
 
   const target = new URL(req.url).searchParams.get('url')
   if (!target) return jsonError('Mangler url-parameter.', 400, origin)
+  if (target.length > 2048) return jsonError('URL-en er for lang.', 400, origin)
+  if (target.includes('@')) return jsonError('Denne adressen kan ikke hentes.', 400, origin)
 
   let parsed: URL
   try {
@@ -139,8 +160,12 @@ Deno.serve(async (req) => {
   } catch {
     return jsonError('Ugyldig URL.', 400, origin)
   }
+  if (parsed.username || parsed.password) return jsonError('Denne adressen kan ikke hentes.', 400, origin)
   if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
     return jsonError('Kun http/https-URL-er er støttet.', 400, origin)
+  }
+  if (parsed.port && !['80', '443', ''].includes(parsed.port)) {
+    return jsonError('Kun port 80 og 443 er støttet.', 400, origin)
   }
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)

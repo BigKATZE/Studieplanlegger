@@ -63,7 +63,21 @@ export default function IcsImport({ subjects, data, onImport, onClose }) {
       }
       // Ingen Supabase konfigurert (lokal/gjest-modus) - prøv direkte fetch.
       // Vil ofte feile pga. CORS siden LMS-en ikke sender riktige headere.
-      const res = await fetch(feedUrl.trim())
+      // ponytail: enkel SSRF-sperre også klient-side for gjestemodus
+      const directUrl = feedUrl.trim()
+      if (directUrl.length > 2048) throw new Error('URL-en er for lang.')
+      if (directUrl.includes('@')) throw new Error('Denne adressen kan ikke hentes.')
+      try {
+        const directParsed = new URL(directUrl)
+        if (directParsed.username || directParsed.password) throw new Error('Denne adressen kan ikke hentes.')
+        if (directParsed.port && !['80', '443', ''].includes(directParsed.port)) throw new Error('Kun port 80 og 443 er støttet.')
+        const host = directParsed.hostname.toLowerCase()
+        if (host === 'localhost' || host.endsWith('.local') || host.endsWith('.internal') || /^10\./.test(host) || /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) || host === '127.0.0.1' || host === '::1' || host.startsWith('100.64.')) throw new Error('Denne adressen kan ikke hentes.')
+      } catch (e) {
+        if (e.message === 'Denne adressen kan ikke hentes.' || e.message.includes('port') || e.message.includes('for lang')) throw e
+        throw new Error('Ugyldig URL.')
+      }
+      const res = await fetch(directUrl)
       if (!res.ok) throw new Error(`Feed svarte ${res.status}`)
       const text = await res.text()
       if (text.length > 2 * 1024 * 1024) throw new Error('Feed-en er for stor (over 2 MB).')

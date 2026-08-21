@@ -157,9 +157,13 @@ function BackupTab({ data, onImport, onClose }) {
 
   const handleFile = async (file) => {
     if (!file) return
+    const sizeError = checkFile(file, { maxBytes: 5 * 1024 * 1024, types: ['application/json'], extensions: ['json'] })
+    if (sizeError) { setError(sizeError); return }
     setError('')
     try {
-      const raw = JSON.parse(await file.text())
+      const text = await file.text()
+      if (text.length > 5 * 1024 * 1024) { setError('Filen er for stor. Maks 5 MB.'); return }
+      const raw = JSON.parse(text)
       if (!isValidBackupData(raw)) {
         setError('Ugyldig fil. Dette ser ikke ut til å være en eksportert sikkerhetskopi.')
         return
