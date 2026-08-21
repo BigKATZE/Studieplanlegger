@@ -332,13 +332,19 @@ test('adaptiv quiz vurderer skrevet svar og lagrer feil forsøk', async ({ page 
   await page.route('**/functions/v1/study-suggestions', (route) => {
     const body = route.request().postDataJSON()
     if (body.tool === 'quiz') quizRequests.push(body)
+    if (body.tool === 'exam-feedback') {
+      const perQuestion = body.examFeedback.questions.map((q, i) => i === 0 ? { feedback: 'Forklar protonene også.', score: 5 } : { feedback: 'Bra.', score: 9 })
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ perQuestion, totalScore: perQuestion.reduce((s, x) => s + x.score, 0), summary: 'Oppsummert', focusAreas: [] }) })
+    }
     const response = body.tool === 'feedback'
       ? { verdict: 'partial', feedback: 'Forklar protonene også.' }
       : { questions: Array.from({ length: 5 }, (_, i) => ({ question: `Spørsmål ${i + 1}`, answer: 'Fasit' })) }
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(response) })
   })
-  await page.getByRole('button', { name: 'Lag øvingsspørsmål', exact: true }).click(); await page.locator('#ai-subject').selectOption('s'); await page.locator('#ai-source').fill('Atomer har protoner, nøytroner og elektroner i atommodellen.'); await page.getByRole('button', { name: 'Lag 5 spørsmål' }).click(); await page.getByLabel('Ditt svar på Spørsmål 1').fill('Elektroner'); await page.getByRole('button', { name: 'Vurder dette ene (1 av 25)' }).first().click()
-  await expect(page.getByText('Forklar protonene også. (partial)')).toBeVisible(); await page.waitForTimeout(150); const stored = await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('oliarev-study-planner-v2')).map((key) => JSON.parse(localStorage.getItem(key))).flatMap((data) => data.quizAttempts || [])); expect(stored).toHaveLength(1); expect(stored[0].verdict).toBe('partial')
+  await page.getByRole('button', { name: 'Lag øvingsspørsmål', exact: true }).click(); await page.locator('#ai-subject').selectOption('s'); await page.locator('#ai-source').fill('Atomer har protoner, nøytroner og elektroner i atommodellen.'); await page.getByRole('button', { name: 'Lag 5 spørsmål' }).click()
+  for (let i = 1; i <= 5; i++) await page.getByLabel(`Ditt svar på Spørsmål ${i}`).fill(`Svar ${i}`)
+  await page.getByRole('button', { name: 'Vurder alle svar' }).click()
+  await expect(page.getByText('Forklar protonene også. (partial')).toBeVisible(); await page.waitForTimeout(150); const stored = await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('oliarev-study-planner-v2')).map((key) => JSON.parse(localStorage.getItem(key))).flatMap((data) => data.quizAttempts || [])); expect(stored).toHaveLength(5); expect(stored.find((x) => x.question === 'Spørsmål 1').verdict).toBe('partial')
   await page.getByRole('button', { name: 'Lag 5 spørsmål' }).click()
   expect(quizRequests).toHaveLength(2)
   expect(quizRequests[1].quiz.weakQuestions).toContain('Spørsmål 1')
