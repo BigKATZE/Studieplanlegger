@@ -1,5 +1,4 @@
 const KEY = 'oliarev-study-planner-v2'
-const LEGACY_KEY = 'oliarev-study-planner-v1'
 
 export function uid() {
   return crypto.randomUUID()
@@ -19,7 +18,7 @@ export function pickSubjectColor(i) {
 
 export function load() {
   try {
-    const raw = localStorage.getItem(KEY) ?? localStorage.getItem(LEGACY_KEY)
+    const raw = localStorage.getItem(KEY)
     if (raw) {
       const data = JSON.parse(raw)
       if (!Array.isArray(data.exams)) data.exams = []

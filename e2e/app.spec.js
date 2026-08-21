@@ -8,20 +8,6 @@ test('uten økt brukes appen som gjest, med Logg inn-knapp', async ({ page }) =>
   await expect(page.getByRole('button', { name: 'Logg inn', exact: true })).toBeVisible()
 })
 
-test('leser v1-data når v2 ikke finnes', async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.setItem('oliarev-study-planner-v1', JSON.stringify({
-      subjects: [{ id: 's1', code: 'JUS2010', name: 'JUS2010', short: 'JUS2010', color: '#7c3aed', levelOverride: null }],
-      lectures: [],
-      assignments: [],
-      exams: [],
-      readings: [],
-    }))
-  })
-  await page.goto('/')
-  await expect(page.getByText('JUS2010').first()).toBeVisible()
-})
-
 test('app loads, pensum tab og fagfilter fungerer', async ({ page }) => {
   const user = {
     id: '00000000-0000-0000-0000-000000000000',
