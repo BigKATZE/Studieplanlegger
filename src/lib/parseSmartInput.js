@@ -189,7 +189,7 @@ function parseEntry(input, subjects) {
     if (!subject) return { ok: false, error: 'Fant ikke hvilket fag det gjelder. Skriv f.eks. «i forretningsjus».' }
     if (!dates.length) return { ok: false, error: 'Mangler frist. Skriv f.eks. «frist 1. oktober».' }
     const titleMatch = low.match(ASSIGNMENT_TITLE)
-    const title = titleMatch ? capitalize(titleMatch[1].trim()) : 'Gjøremål'
+    const title = titleMatch ? capitalize(titleMatch[1].trim()) : 'Arbeidskrav'
     return { ok: true, actions: dates.map((d) => ({ type: 'assignment', subject, title, date: d })) }
   }
 

@@ -34,12 +34,12 @@ export default function Gjøremål({ assignments, subjects, onSetAssignmentStatu
   return (
     <section className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Gjøremål &amp; arbeidskrav</h2>
+        <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Arbeidskrav</h2>
         <WeekFilter weeks={weeks} active={week} onChange={setWeek} />
       </div>
       {assignments.length === 0 && (
         <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
-          Ingen gjøremål ennå. Legg til et arbeidskrav.
+          Ingen arbeidskrav ennå. Legg til et arbeidskrav.
         </p>
       )}
       <div className="mt-3 space-y-6">

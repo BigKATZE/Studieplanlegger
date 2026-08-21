@@ -22,7 +22,7 @@ const TABS = [
   { id: 'overview', label: 'Oversikt' },
   { id: 'timeplan', label: 'Timeplan' },
   { id: 'reading', label: 'Pensum' },
-  { id: 'tasks', label: 'Gjøremål' },
+  { id: 'tasks', label: 'Arbeidskrav' },
   { id: 'exams', label: 'Eksamener' },
 ]
 
