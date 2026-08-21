@@ -76,8 +76,10 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
 
   const evaluateAllQuiz = async () => {
     if (!result?.questions) return
-    const allAnswers = result.questions.map((item, index) => ({ item, index, userAnswer: answerInputs[index]?.trim() || '' }))
-    if (allAnswers.some((entry) => !entry.userAnswer)) { setError('Fyll inn svar på alle spørsmål før du vurderer.'); return }
+    const allAnswers = result.questions.map((item, index) => {
+      const raw = answerInputs[index]?.trim() || ''
+      return { item, index, userAnswer: raw || 'pass', isPass: !raw }
+    })
     setLoading(true)
     setError('')
     try {
@@ -87,11 +89,13 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
       })
       if (invokeError) throw new Error()
       const nextFeedback = {}
-      allAnswers.forEach(({ index, item }, i) => {
+      allAnswers.forEach(({ index, item, isPass }, i) => {
         const per = evaluation.perQuestion[i]
-        const verdict = per.score >= 8 ? 'correct' : per.score >= 4 ? 'partial' : 'incorrect'
-        nextFeedback[index] = { feedback: per.feedback, verdict, score: per.score }
-        onAddAttempt?.({ subjectId, sourceId: '', question: item.question, expectedAnswer: item.answer, userAnswer: answerInputs[index], verdict, feedback: per.feedback })
+        const verdict = isPass ? 'incorrect' : per.score >= 8 ? 'correct' : per.score >= 4 ? 'partial' : 'incorrect'
+        const displayScore = isPass ? 0 : per.score
+        const displayFeedback = isPass ? `Hoppet over. ${per.feedback}` : per.feedback
+        nextFeedback[index] = { feedback: displayFeedback, verdict, score: displayScore }
+        onAddAttempt?.({ subjectId, sourceId: '', question: item.question, expectedAnswer: item.answer, userAnswer: isPass ? 'pass' : answerInputs[index], verdict, feedback: displayFeedback })
         if (verdict !== 'correct') onAddReview?.({ subjectId, title: item.question, details: item.answer })
       })
       setFeedbackByQuestion((previous) => ({ ...previous, ...nextFeedback }))
@@ -404,12 +408,12 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
       {result && tool === 'quiz' && (
         <section className="mt-6 rounded-lg border border-line bg-surface p-5">
           <h3 className="font-display text-lg font-semibold">Øvingsspørsmål</h3>
-          <p className="mt-1 text-xs text-muted">Fyll inn svar på alle spørsmål og vurder samlet.</p>
+          <p className="mt-1 text-xs text-muted">Fyll inn svar der du kan — tomme felt blir “pass” og vurderes likt av AI.</p>
           <ol className="mt-4 space-y-3">
             {result.questions.map((item, index) => (
               <li key={`${item.question}-${index}`} className="rounded-md bg-paper p-4">
                 <p className="text-sm font-semibold">{index + 1}. {item.question}</p>
-                <details className="mt-2 text-sm"><summary className="cursor-pointer text-secondary">Vis svar</summary><p className="mt-2 text-muted">{item.answer}</p></details><textarea aria-label={`Ditt svar på ${item.question}`} required value={answerInputs[index] || ''} onChange={(event) => setAnswerInputs((value) => ({ ...value, [index]: event.target.value }))} className="mt-3 w-full rounded-md border border-line bg-surface p-2 text-sm" rows="2" placeholder="Skriv ditt svar" />{feedbackByQuestion[index] && <p className="mt-2 text-sm text-muted">{feedbackByQuestion[index].feedback} ({feedbackByQuestion[index].verdict}{feedbackByQuestion[index].score != null ? `, ${feedbackByQuestion[index].score}/10` : ''})</p>}
+                <details className="mt-2 text-sm"><summary className="cursor-pointer text-secondary">Vis svar</summary><p className="mt-2 text-muted">{item.answer}</p></details><textarea aria-label={`Ditt svar på ${item.question}`} value={answerInputs[index] || ''} onChange={(event) => setAnswerInputs((value) => ({ ...value, [index]: event.target.value }))} className="mt-3 w-full rounded-md border border-line bg-surface p-2 text-sm" rows="2" placeholder="Skriv ditt svar – la stå tomt for pass" />{feedbackByQuestion[index] && <p className="mt-2 text-sm text-muted">{feedbackByQuestion[index].feedback} ({feedbackByQuestion[index].verdict}{feedbackByQuestion[index].score != null ? `, ${feedbackByQuestion[index].score}/10` : ''})</p>}
                 <button className="btn-ghost mt-3 !min-h-8 !px-2 !py-1 text-xs" onClick={() => onAddReview?.({ subjectId, title: item.question, details: item.answer })}>Legg til repetisjon</button>
               </li>
             ))}
