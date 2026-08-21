@@ -17,6 +17,7 @@ import ShareModal from './components/ShareModal'
 import DeltFag from './components/DeltFag'
 import { Modal, SubjectForm, LectureForm, AssignmentForm, ExamForm, ReadingForm } from './components/Modals'
 import { DeadlineStrip, SubjectFilter } from './components/ui'
+import AiSuggestions from './components/AiSuggestions'
 
 const TABS = [
   { id: 'overview', label: 'Oversikt' },
@@ -462,6 +463,7 @@ export default function App() {
       <main className="mx-auto max-w-5xl px-4 pb-20">
         {tab === 'overview' && (
           <>
+            <AiSuggestions data={data} enabled={Boolean(hasSupabase && user && user.id !== 'local')} />
             <SubjectPanel
               subjects={data.subjects}
               lectures={data.lectures}
