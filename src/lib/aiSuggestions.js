@@ -5,7 +5,7 @@ export function buildSuggestionPayload(data, now = new Date()) {
   const inTwoWeeks = new Date(now)
   inTwoWeeks.setDate(inTwoWeeks.getDate() + 14)
   const lastLectureDate = iso(inTwoWeeks)
-  const subject = Object.fromEntries(data.subjects.map((s) => [s.id, s.short || s.code || s.name]))
+  const subject = Object.fromEntries(data.subjects.map((s) => [s.id, s.code && s.name && s.code !== s.name ? `${s.code} – ${s.name}` : s.name || s.short || s.code]))
   const item = (kind, value, date, status) => {
     const details = value.chapters?.filter((chapter) => !chapter.done).map((chapter) => chapter.text).filter(Boolean).join('; ')
     return {

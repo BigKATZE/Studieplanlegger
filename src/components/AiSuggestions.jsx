@@ -51,6 +51,9 @@ export default function AiSuggestions({ data, enabled }) {
               <li key={`${suggestion.title}-${index}`} className="rounded-md border border-line bg-paper p-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-secondary">{index + 1}</p>
                 <h3 className="mt-1 text-sm font-semibold text-ink">{suggestion.title}</h3>
+                <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-ink">
+                  {suggestion.topics.map((topic) => <li key={topic}>{topic}</li>)}
+                </ul>
                 <p className="mt-1 text-sm text-ink">{suggestion.action}</p>
                 <p className="mt-2 text-xs text-muted">{suggestion.reason}</p>
               </li>
