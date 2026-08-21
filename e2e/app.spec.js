@@ -5,6 +5,13 @@ test('uten økt brukes appen som gjest, med Logg inn-knapp', async ({ page }) =>
   await expect(page.getByRole('heading', { name: 'Studieplanlegger' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Logg inn' })).toBeVisible()
   await expect(page.getByRole('status')).toHaveText('Lagret lokalt')
+  const githubLink = page.getByRole('link', { name: 'Åpne GitHub-repositoriet' })
+  await expect(githubLink).toHaveAttribute('href', 'https://github.com/BigKATZE/Studieplanlegger')
+  const [githubBox, headingBox] = await Promise.all([
+    githubLink.boundingBox(),
+    page.getByRole('heading', { name: 'Studieplanlegger' }).boundingBox(),
+  ])
+  expect(githubBox.y).toBeLessThan(headingBox.y)
   await page.getByRole('button', { name: 'Changelog', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Changelog' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'v1.1' })).toBeVisible()

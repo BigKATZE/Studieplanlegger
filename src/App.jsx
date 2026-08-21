@@ -461,7 +461,20 @@ export default function App() {
   return (
     <div className="min-h-screen">
       <header className="mx-auto max-w-5xl px-4 pb-6 pt-5 sm:pt-8">
-        <div className="mb-6 flex flex-wrap items-center justify-end gap-x-1 gap-y-2 text-right">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <a
+            href="https://github.com/BigKATZE/Studieplanlegger"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Åpne GitHub-repositoriet"
+            title="GitHub"
+            className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-[10px] text-ink transition-colors hover:bg-surface hover:text-primary"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.3c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.6 5 18.6 5.3 18.6 5.3c.7 1.7.3 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3Z" />
+            </svg>
+          </a>
+          <div className="flex flex-wrap items-center justify-end gap-x-1 gap-y-2 text-right">
           <span role="status" aria-live="polite" className={`text-xs ${syncStatus === 'error' ? 'text-danger' : 'text-muted'}`}>
             {{ local: 'Lagret lokalt', loading: 'Kobler til…', saving: 'Lagrer…', saved: 'Synkronisert', conflict: 'Oppdatert fra annen enhet', error: 'Synkfeil' }[syncStatus]}
           </span>
@@ -525,6 +538,7 @@ export default function App() {
               </button>
             </>
           )}
+          </div>
         </div>
         <h1 className="font-display text-3xl font-bold tracking-[-.03em] sm:text-4xl">Studieplanlegger</h1>
         <p className="mt-1 text-sm text-muted">Timeplan, pensum, arbeidskrav og eksamener - uke for uke.</p>
