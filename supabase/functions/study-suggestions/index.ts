@@ -299,34 +299,44 @@ Deno.serve(async (req) => {
   if (!allowed) return json({ error: `Du har brukt dagens ${DAILY_LIMIT} AI-kall.` }, 429, origin)
 
   const request = requestFor(payload)
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 25_000)
-  try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: request.prompt }] }],
-        generationConfig: { responseMimeType: 'application/json', maxOutputTokens: request.maxOutputTokens, responseSchema: request.schema },
-      }),
-    })
-    if (!response.ok) {
-      console.error('Gemini:', response.status, await response.text())
-      return json({ error: response.status === 429 ? 'AI-tjenesten har nådd gratiskvoten. Prøv igjen senere.' : 'AI-tjenesten svarte ikke.' }, 502, origin)
+  // ponytail: retry én gang ved feil steg-antall – Gemini ignorerer av og til minItems
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 25_000)
+    try {
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: request.prompt + (attempt ? ' Viktig: antall steg må være innenfor intervallet spesifisert.' : '') }] }],
+          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: request.maxOutputTokens, responseSchema: request.schema },
+        }),
+      })
+      if (!response.ok) {
+        console.error('Gemini:', response.status, await response.text())
+        return json({ error: response.status === 429 ? 'AI-tjenesten har nådd gratiskvoten. Prøv igjen senere.' : 'AI-tjenesten svarte ikke.' }, 502, origin)
+      }
+      const gemini = await response.json()
+      const text = gemini.candidates?.[0]?.content?.parts?.[0]?.text
+      const result = text && JSON.parse(text)
+      if (!validResult(payload, result)) {
+        if (payload.tool === 'breakdown' && attempt === 0) {
+          console.warn('Breakdown ugyldig steg-antall, prøver igjen', JSON.stringify(result)?.slice(0, 300))
+          continue
+        }
+        return json({ error: 'AI-tjenesten ga et ugyldig svar. Prøv igjen – antallet steg ble feil.' }, 502, origin)
+      }
+      const responseBody = payload.tool === 'breakdown'
+        ? fitBreakdownToBudget(payload, result as Record<string, unknown>)
+        : result
+      return json(responseBody, 200, origin)
+    } catch (error) {
+      console.error('Gemini request:', error)
+      return json({ error: error instanceof Error && error.name === 'AbortError' ? 'AI-tjenesten brukte for lang tid.' : 'Kunne ikke bruke AI-verktøyet.' }, 502, origin)
+    } finally {
+      clearTimeout(timeout)
     }
-    const gemini = await response.json()
-    const text = gemini.candidates?.[0]?.content?.parts?.[0]?.text
-    const result = text && JSON.parse(text)
-    if (!validResult(payload, result)) return json({ error: 'AI-tjenesten ga et ugyldig svar.' }, 502, origin)
-    const responseBody = payload.tool === 'breakdown'
-      ? fitBreakdownToBudget(payload, result as Record<string, unknown>)
-      : result
-    return json(responseBody, 200, origin)
-  } catch (error) {
-    console.error('Gemini request:', error)
-    return json({ error: error instanceof Error && error.name === 'AbortError' ? 'AI-tjenesten brukte for lang tid.' : 'Kunne ikke bruke AI-verktøyet.' }, 502, origin)
-  } finally {
-    clearTimeout(timeout)
   }
+  return json({ error: 'AI-tjenesten ga et ugyldig svar.' }, 502, origin)
 })

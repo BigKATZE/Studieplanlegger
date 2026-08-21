@@ -88,7 +88,7 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
     event.preventDefault()
     if (tool === 'exam' && result?.questions) { submitExam(); return }
     if (tool === 'weekly-report') {
-      setLoading(true); setError('')
+      setLoading(true); setError(''); setResult(null)
       try { const { data: response, error: invokeError } = await supabase.functions.invoke('study-suggestions', { body: buildAiRequest('weekly-report', 'ukerapport', {}, { snapshot: buildWeeklySnapshot(data) }) }); if (invokeError) setError('Kunne ikke lage ukesrapporten.'); else setResult(response) } catch { setError('Mistet forbindelsen til AI-verktøyet.') } finally { setLoading(false) }
       return
     }
@@ -101,7 +101,7 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
           : 'Legg til en kilde i valgt fag før du søker.')
         return
       }
-      setLoading(true); setError(''); try { const { data: response, error: invokeError } = await supabase.functions.invoke('study-suggestions', { body: buildAiRequest('source-search', searchQuery, { subject: subjectLabel(data.subjects.find((x) => x.id === subjectId) || {}) }, { query: searchQuery, passages }) }); if (invokeError) setError('Kunne ikke søke i kildene.'); else setResult(response) } catch { setError('Mistet forbindelsen til AI-verktøyet.') } finally { setLoading(false) }
+      setLoading(true); setError(''); setResult(null); try { const { data: response, error: invokeError } = await supabase.functions.invoke('study-suggestions', { body: buildAiRequest('source-search', searchQuery, { subject: subjectLabel(data.subjects.find((x) => x.id === subjectId) || {}) }, { query: searchQuery, passages }) }); if (invokeError) setError('Kunne ikke søke i kildene.'); else setResult(response) } catch { setError('Mistet forbindelsen til AI-verktøyet.') } finally { setLoading(false) }
       return
     }
     if (text.trim().length < 20) {
@@ -114,6 +114,7 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
     setLoading(true)
     setError('')
     setCopyState('')
+    setResult(null)
     try {
       const assignmentContext = assignment
         ? `${assignment.title}${assignment.deadline ? ` (frist ${assignment.deadline})` : ''}`
