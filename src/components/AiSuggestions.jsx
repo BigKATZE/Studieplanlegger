@@ -58,7 +58,7 @@ export default function AiSuggestions({ data, enabled }) {
           </ol>
         </div>
       )}
-      <p className="mt-3 text-xs text-muted">Fag, aktivitetstitler, kapitler og datoer sendes til Gemini. Maks 5 forespørsler per bruker per dag.</p>
+      <p className="mt-3 text-xs text-muted">Fag, aktivitetstitler, kapitler og datoer sendes til Gemini. Maks 25 forespørsler per bruker per dag.</p>
     </section>
   )
 }
