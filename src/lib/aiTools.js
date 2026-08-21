@@ -1,4 +1,5 @@
 export function buildAiRequest(tool, text, context = {}, options = {}) {
+  const count = Number(options.count)
   return {
     tool,
     text: text.trim().slice(0, 20_000),
@@ -10,7 +11,7 @@ export function buildAiRequest(tool, text, context = {}, options = {}) {
     ...(tool === 'quiz' ? {
       quiz: {
         difficulty: ['easy', 'medium', 'hard'].includes(options.difficulty) ? options.difficulty : 'medium',
-        count: [3, 5, 10].includes(options.count) ? options.count : 5,
+        count: Number.isInteger(count) && count >= 3 && count <= 15 ? count : 5,
         previousQuestions: (options.previousQuestions ?? [])
           .filter((question) => typeof question === 'string' && question.trim())
           .slice(-30)

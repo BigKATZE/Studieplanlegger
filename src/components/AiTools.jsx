@@ -12,12 +12,13 @@ export default function AiTools({ data, enabled }) {
   const [assignmentId, setAssignmentId] = useState('')
   const [subjectId, setSubjectId] = useState('')
   const [difficulty, setDifficulty] = useState('medium')
-  const [questionCount, setQuestionCount] = useState(5)
+  const [questionCount, setQuestionCount] = useState('5')
   const [avoidPrevious, setAvoidPrevious] = useState(true)
   const [previousQuestions, setPreviousQuestions] = useState([])
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const normalizedQuestionCount = Math.min(15, Math.max(3, Number(questionCount) || 5))
 
   const selectTool = (next) => {
     setTool(next)
@@ -43,7 +44,7 @@ export default function AiTools({ data, enabled }) {
         assignment: assignment?.title,
       }, {
         difficulty,
-        count: questionCount,
+        count: normalizedQuestionCount,
         previousQuestions: avoidPrevious ? previousQuestions : [],
       }),
     })
@@ -115,9 +116,7 @@ export default function AiTools({ data, enabled }) {
                 </div>
                 <div>
                   <label htmlFor="ai-question-count" className="block text-sm font-medium">Antall spørsmål</label>
-                  <select id="ai-question-count" value={questionCount} onChange={(event) => setQuestionCount(Number(event.target.value))} className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm">
-                    {[3, 5, 10].map((count) => <option key={count} value={count}>{count}</option>)}
-                  </select>
+                  <input id="ai-question-count" type="number" min="3" max="15" value={questionCount} onChange={(event) => setQuestionCount(event.target.value)} onBlur={() => setQuestionCount(String(normalizedQuestionCount))} className="mt-1 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm" />
                 </div>
                 <div>
                   <span className="block text-sm font-medium">Tidligere spørsmål</span>
@@ -134,7 +133,7 @@ export default function AiTools({ data, enabled }) {
           <textarea id="ai-source" value={text} onChange={(event) => setText(event.target.value)} maxLength={20_000} rows={10} className="mt-2 w-full rounded-md border border-line bg-paper px-3 py-2 text-sm focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20" placeholder={tool === 'breakdown' ? 'Lim inn oppgaveteksten her…' : 'Lim inn notater eller pensumtekst her…'} />
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <span className="text-xs text-muted">{text.length.toLocaleString('nb-NO')} / 20 000 tegn</span>
-            <button type="submit" disabled={loading} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">{loading ? 'Arbeider…' : tool === 'breakdown' ? 'Lag arbeidsplan' : `Lag ${questionCount} spørsmål`}</button>
+            <button type="submit" disabled={loading} className="btn-primary disabled:cursor-not-allowed disabled:opacity-50">{loading ? 'Arbeider…' : tool === 'breakdown' ? 'Lag arbeidsplan' : `Lag ${normalizedQuestionCount} spørsmål`}</button>
           </div>
           {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
         </form>

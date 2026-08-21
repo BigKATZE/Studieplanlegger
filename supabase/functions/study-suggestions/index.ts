@@ -24,7 +24,7 @@ type Payload = {
   tool: 'breakdown' | 'quiz'
   text: string
   context: { subject?: string; assignment?: string }
-  quiz?: { difficulty: 'easy' | 'medium' | 'hard'; count: 3 | 5 | 10; previousQuestions: string[] }
+  quiz?: { difficulty: 'easy' | 'medium' | 'hard'; count: number; previousQuestions: string[] }
 }
 
 function validPayload(value: unknown): value is Payload {
@@ -38,7 +38,8 @@ function validPayload(value: unknown): value is Payload {
   if (payload.tool === 'breakdown') return payload.quiz === undefined
   if (!payload.quiz || typeof payload.quiz !== 'object' || Array.isArray(payload.quiz)) return false
   const quiz = payload.quiz as Record<string, unknown>
-  return ['easy', 'medium', 'hard'].includes(quiz.difficulty as string) && [3, 5, 10].includes(quiz.count as number) &&
+  return ['easy', 'medium', 'hard'].includes(quiz.difficulty as string) && Number.isInteger(quiz.count as number) &&
+    (quiz.count as number) >= 3 && (quiz.count as number) <= 15 &&
     Array.isArray(quiz.previousQuestions) && quiz.previousQuestions.length <= 30 &&
     quiz.previousQuestions.every((question) => typeof question === 'string' && question.length <= 500)
 }
@@ -92,7 +93,7 @@ function requestFor(payload: Payload) {
       },
       required: ['questions'],
     },
-    maxOutputTokens: quiz.count === 10 ? 2600 : 1800,
+    maxOutputTokens: quiz.count >= 10 ? 3600 : 1800,
   }
 }
 
