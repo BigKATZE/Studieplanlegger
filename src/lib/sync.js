@@ -3,15 +3,13 @@ import { supabase, hasSupabase } from './supabase'
 import { load, normalizePlannerData } from './store'
 
 const unscopedKey = 'oliarev-study-planner-v2'
-const legacyUnscopedKey = 'oliarev-study-planner-v1'
 const cacheKey = (userId) => (hasSupabase && userId !== 'local' ? `${unscopedKey}-${userId}` : unscopedKey)
-const legacyCacheKey = (userId) => (hasSupabase && userId !== 'local' ? `${legacyUnscopedKey}-${userId}` : legacyUnscopedKey)
 
 const normalize = normalizePlannerData
 
 function localData(userId) {
   try {
-    const raw = localStorage.getItem(cacheKey(userId)) ?? localStorage.getItem(legacyCacheKey(userId))
+    const raw = localStorage.getItem(cacheKey(userId))
     if (raw) return normalize(JSON.parse(raw))
   } catch {
     /* ignore corrupted cache */
