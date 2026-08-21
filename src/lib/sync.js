@@ -3,7 +3,9 @@ import { supabase, hasSupabase } from './supabase'
 import { load } from './store'
 
 const unscopedKey = 'oliarev-study-planner-v2'
+const legacyUnscopedKey = 'oliarev-study-planner-v1'
 const cacheKey = (userId) => (hasSupabase && userId !== 'local' ? `${unscopedKey}-${userId}` : unscopedKey)
+const legacyCacheKey = (userId) => (hasSupabase && userId !== 'local' ? `${legacyUnscopedKey}-${userId}` : legacyUnscopedKey)
 
 function normalize(data) {
   if (!data) return data
@@ -15,7 +17,7 @@ function normalize(data) {
 
 function localData(userId) {
   try {
-    const raw = localStorage.getItem(cacheKey(userId))
+    const raw = localStorage.getItem(cacheKey(userId)) ?? localStorage.getItem(legacyCacheKey(userId))
     if (raw) return normalize(JSON.parse(raw))
   } catch {
     /* ignore corrupted cache */

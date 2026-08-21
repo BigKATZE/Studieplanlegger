@@ -158,7 +158,7 @@ function BackupTab({ data, onImport, onClose }) {
     if (!file) return
     setError('')
     try {
-      const parsed = JSON.parse(await file.text())
+      const parsed = { assignments: [], exams: [], readings: [], ...JSON.parse(await file.text()) }
       const keys = ['subjects', 'lectures', 'assignments', 'exams', 'readings']
       if (!parsed || typeof parsed !== 'object' || keys.some((k) => !Array.isArray(parsed[k]))) {
         setError('Ugyldig fil. Dette ser ikke ut til å være en eksportert sikkerhetskopi.')
