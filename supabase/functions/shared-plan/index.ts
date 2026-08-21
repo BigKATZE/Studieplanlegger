@@ -127,6 +127,10 @@ Deno.serve(async (request) => {
       if (expireError) return json({ error: 'Kunne ikke fornye delingslenken.' }, 500)
     }
 
+    // ponytail: enkel rate-limit 10 nye lenker per time per bruker
+    const { count: recentCount } = await service.from('shared_plan_links').select('token', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', new Date(Date.now() - 3600_000).toISOString())
+    if (recentCount != null && recentCount >= 10) return json({ error: 'For mange delingslenker opprettet. Prøv igjen senere.' }, 429)
+
     const token = createToken()
     const expiresAt = new Date(Date.now() + LINK_LIFETIME_DAYS * 86_400_000).toISOString()
     const { error: insertError } = await service

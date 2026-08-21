@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { buildAiRequest, formatBreakdownPlan, buildWeeklySnapshot, rankSourcePassages } from '../lib/aiTools'
-import { checkFile } from '../lib/upload'
+import { checkFile, validateFileMagic } from '../lib/upload'
 
 const subjectLabel = (subject) => subject.code && subject.name && subject.code !== subject.name
   ? `${subject.code} - ${subject.name}`
@@ -211,6 +211,8 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
     if (!file) return
     const fileError = checkFile(file, { maxBytes: 10 * 1024 * 1024, types: ['application/pdf'], extensions: ['pdf'] })
     if (fileError) { setError(fileError); return }
+    const magicError = await validateFileMagic(file)
+    if (magicError) { setError(magicError); return }
     setPdfState('Leser PDF-en lokalt…')
     setError('')
     try {
@@ -228,6 +230,8 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
     if (!file) return
     const fileError = checkFile(file, { maxBytes: 10 * 1024 * 1024, types: ['application/pdf'], extensions: ['pdf'] })
     if (fileError) { setError(fileError); return }
+    const magicError = await validateFileMagic(file)
+    if (magicError) { setError(magicError); return }
     if (!subjectId || !sourceTitle.trim()) { setError('Velg fag og skriv en kildetittel før du leser PDF-en.'); return }
     if (data.aiSources.length >= 25) { setError('Du kan lagre maksimalt 25 kilder.'); return }
     setPdfState('Leser PDF-en lokalt…')

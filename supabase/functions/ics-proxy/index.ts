@@ -27,6 +27,14 @@
 const MAX_BYTES = 2 * 1024 * 1024 // 2 MB – matcher grensen i frontend
 const FETCH_TIMEOUT_MS = 10_000
 const MAX_REDIRECTS = 5
+const ALLOWED_SUFFIXES = (Deno.env.get('ICS_ALLOWED_DOMAINS') ?? 'instructure.com,canvas.instructure.com,itslearning.com,feide.no,office365.com,outlook.live.com,calendar.google.com,google.com,uis.no,oslomet.no,ntnu.no,usn.no,achillesys.com').split(',').map((value) => value.trim().toLowerCase()).filter(Boolean)
+const DISABLE_ALLOWLIST = Deno.env.get('ICS_DISABLE_ALLOWLIST') === 'true'
+
+function isAllowedHost(hostname: string): boolean {
+  if (DISABLE_ALLOWLIST) return true
+  const lower = hostname.toLowerCase()
+  return ALLOWED_SUFFIXES.some((suffix) => lower === suffix || lower.endsWith(`.${suffix}`))
+}
 
 function corsHeaders(origin: string | null) {
   return {
@@ -101,7 +109,7 @@ async function isBlockedTarget(hostname: string): Promise<boolean> {
 async function fetchValidated(start: URL, signal: AbortSignal): Promise<Response> {
   let url = start
   for (let redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
-    if (await isBlockedTarget(url.hostname)) throw new Error('blocked-target')
+    if (await isBlockedTarget(url.hostname) || !isAllowedHost(url.hostname)) throw new Error('blocked-target')
     const response = await fetch(url, { redirect: 'manual', signal })
     if (![301, 302, 303, 307, 308].includes(response.status)) return response
     const location = response.headers.get('location')
@@ -167,10 +175,21 @@ Deno.serve(async (req) => {
   if (parsed.port && !['80', '443', ''].includes(parsed.port)) {
     return jsonError('Kun port 80 og 443 er støttet.', 400, origin)
   }
+  if (!isAllowedHost(parsed.hostname)) {
+    return jsonError('Domenet er ikke tillatt for kalenderfeed. Tillatte domener: ' + ALLOWED_SUFFIXES.join(', '), 400, origin)
+  }
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   try {
     const res = await fetchValidated(parsed, controller.signal)
+    // DNS-rebinding: sjekk også endelig URL etter redirects
+    try {
+      const finalHost = new URL(res.url).hostname
+      if (await isBlockedTarget(finalHost) || !isAllowedHost(finalHost)) throw new Error('blocked-target')
+    } catch {
+      // hvis res.url er ugyldig eller blokkert, avvis
+      if (res.url) throw new Error('blocked-target')
+    }
     if (!res.ok) return jsonError(`Feed svarte ${res.status}.`, 502, origin)
 
     const buf = await readLimited(res)

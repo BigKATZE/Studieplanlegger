@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { parseIcs, guessKind, extractCode } from '../lib/ics'
 import { matchSubject } from '../lib/parseSmartInput'
-import { checkFile } from '../lib/upload'
+import { checkFile, validateFileMagic } from '../lib/upload'
 import { uid } from '../lib/store'
 import { supabase, hasSupabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
 import { Select, DateField } from './ui'
@@ -100,6 +100,8 @@ export default function IcsImport({ subjects, data, onImport, onClose }) {
       setError(err)
       return
     }
+    const magicError = await validateFileMagic(file)
+    if (magicError) { setError(magicError); return }
     setError('')
     await loadText(await file.text())
   }

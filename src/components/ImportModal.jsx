@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Modal } from './Modals'
 import { Select, DateField, TimeField } from './ui'
-import { checkFile } from '../lib/upload'
+import { checkFile, validateFileMagic } from '../lib/upload'
 import IcsImport from './IcsModal'
 import { isValidBackupData, normalizePlannerData } from '../lib/store'
 
@@ -25,6 +25,8 @@ function PdfImport({ subjects, onImport, onClose }) {
       setError(err)
       return
     }
+    const magicError = await validateFileMagic(file)
+    if (magicError) { setError(magicError); return }
     setState('parsing')
     setError('')
     try {
@@ -159,6 +161,8 @@ function BackupTab({ data, onImport, onClose }) {
     if (!file) return
     const sizeError = checkFile(file, { maxBytes: 5 * 1024 * 1024, types: ['application/json'], extensions: ['json'] })
     if (sizeError) { setError(sizeError); return }
+    const magicError = await validateFileMagic(file)
+    if (magicError) { setError(magicError); return }
     setError('')
     try {
       const text = await file.text()
