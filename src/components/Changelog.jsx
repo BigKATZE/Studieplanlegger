@@ -1,5 +1,13 @@
 const RELEASES = [
   {
+    version: 'v1.2.4', date: '2026-08-22', dateLabel: '22. august 2026', title: 'Mykere detaljer og ryddigere menyer', summary: 'Små visuelle justeringer som gjør navigering og valg roligere, uten å endre flyten.', groups: [
+      { title: 'Bevegelse', items: ['Myk innflyvning ved bytte av fane og ved filtrering (I dag/Neste 7 dager, fag-filter).', 'Knapper gir et lite trykk-svar ved klikk.'] },
+      { title: 'Design', items: ['Kortene i Oversikt har fått et litt tydeligere, men fortsatt subtilt glassuttrykk med svake bakgrunnsflekker og lett løft ved hover.', 'Vinduer og rullefelt har fått roligere avrunding, skygge og tynn, stilren scrollbar som matcher det minimalistiske uttrykket.'] },
+      { title: 'Menyer', items: ['Alle nedtrekksmenyer deler nå samme heldekkende stil, med tydelig markering og hake for valgt rad — slik som i ukevelgeren.', 'Menyen for kunnskapsnivå legger seg ikke lenger bak neste kort.'] },
+      { title: 'Fag', items: ['Fargevelgeren i Nytt/Rediger fag viser en egen liten boks med fargekoden når du holder over en farge, i samme stil som resten av siden.', 'Valgt fagfilter får en myk, lys markering med svakt hint av fagfargen i stedet for heldekkende mørk pille.'] },
+    ],
+  },
+  {
     version: 'v1.2.3', date: '2026-08-22', dateLabel: '22. august 2026', title: 'Bedre mobilopplevelse', summary: 'Oversikt og AI-verktøy er justert for mindre skjermer.', groups: [
       { title: 'Mobil', items: ['Fag- og fremdriftskortene tilpasser seg bedre på mobil og unngår horisontal scrolling.', 'AI-fanene ligger nå under hverandre på mobil, som resten av knapperadene.'] },
     ],
