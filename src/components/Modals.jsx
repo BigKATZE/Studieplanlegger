@@ -19,14 +19,14 @@ export function Modal({ title, onClose, children }) {
     }
   }, [onClose])
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-ink/30 p-4 pt-12" onClick={onClose}>
+    <div className="modal-backdrop fixed inset-0 z-50 overflow-y-auto p-4 pt-12" onClick={onClose}>
       <div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="mx-auto w-full max-w-lg rounded-xl bg-surface p-6 shadow-xl ring-1 ring-line"
+        className="glass-panel animate-scale-in mx-auto w-full max-w-lg rounded-xl p-6"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">
@@ -95,14 +95,24 @@ export function SubjectForm({ onAdd, onClose, initial }) {
       <Field label="Farge">
         <div className="flex flex-wrap gap-2">
           {SUBJECT_COLORS.map((c) => (
-            <button
-              key={c}
-              type="button"
-              onClick={() => setColor(c)}
-              className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-110 ${color === c ? 'border-ink' : 'border-transparent'}`}
-              style={{ backgroundColor: c }}
-              aria-label={`Farge ${c}`}
-            />
+            <div key={c} className="group relative">
+              <button
+                type="button"
+                onClick={() => setColor(c)}
+                className={`h-7 w-7 rounded-full border-2 transition-all hover:scale-110 hover:shadow-md ${color === c ? 'border-ink ring-2 ring-ink/10 scale-110' : 'border-transparent hover:border-line'}`}
+                style={{ backgroundColor: c }}
+                aria-label={`Farge ${c}`}
+              />
+              <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2.5 hidden -translate-x-1/2 group-hover:block group-focus-within:block">
+                <div className="animate-scale-in whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-xs font-medium text-paper shadow-xl">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-3 w-3 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: c }} />
+                    {c.toUpperCase()}
+                  </span>
+                  <div className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1 rotate-45 bg-ink" />
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </Field>

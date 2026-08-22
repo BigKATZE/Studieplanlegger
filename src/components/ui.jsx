@@ -133,11 +133,11 @@ export function Select({ value, onChange, options, className = '', ariaLabel, pl
         aria-label={ariaLabel}
         aria-expanded={open}
         aria-haspopup="listbox"
-        className="flex w-full items-center justify-between gap-2 rounded-md border border-line bg-surface px-3 py-2 text-sm transition-colors hover:border-muted focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20"
+        className={`flex w-full items-center justify-between gap-2.5 rounded-[12px] border bg-surface px-3.5 py-2.5 text-sm font-medium shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-secondary/15 ${open ? 'border-secondary/30 bg-surface shadow-md ring-2 ring-secondary/10' : 'border-line hover:border-muted hover:bg-surface'}`}
       >
-        <span className="truncate text-left">{selected ? selected.label : placeholder}</span>
+        <span className="truncate text-left text-ink">{selected ? selected.label : <span className="text-muted">{placeholder}</span>}</span>
         <svg
-          className={`h-4 w-4 shrink-0 text-muted transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          className={`h-4 w-4 shrink-0 text-muted transition-transform duration-200 ${open ? 'rotate-180 text-ink' : ''}`}
           fill="none"
           viewBox="0 0 20 20"
         >
@@ -145,7 +145,7 @@ export function Select({ value, onChange, options, className = '', ariaLabel, pl
         </svg>
       </button>
       {open && (
-        <div role="listbox" className="select-menu absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-line bg-surface p-1 shadow-lg">
+        <div role="listbox" className="select-menu absolute z-50 mt-2 max-h-64 w-full overflow-auto rounded-xl bg-surface border border-line p-1.5 shadow-[0_16px_40px_rgba(23,33,31,0.12),0_4px_12px_rgba(23,33,31,0.08)]">
           {options.map((o, i) => (
             <button
               key={o.value}
@@ -157,11 +157,12 @@ export function Select({ value, onChange, options, className = '', ariaLabel, pl
                 onChange(o.value)
                 setOpen(false)
               }}
-              className={`block w-full truncate rounded px-2.5 py-1.5 text-left text-sm transition-colors ${
-                o.value === value ? 'bg-secondary/10 font-medium text-ink' : 'text-ink hover:bg-paper'
-              }`}
+              className={`group flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-150 ${o.value === value ? 'bg-secondary/[0.09] font-medium text-ink shadow-sm ring-1 ring-secondary/10' : 'text-muted hover:bg-paper/65 hover:text-ink'}`}
             >
-              {o.label}
+              <span className="truncate">{o.label}</span>
+              {o.value === value && (
+                <svg className="h-3.5 w-3.5 shrink-0 text-secondary" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M5 10l3 3 7-6" /></svg>
+              )}
             </button>
           ))}
         </div>
@@ -211,7 +212,7 @@ export function SubjectFilter({ subjects, active, onChange }) {
     <div className="mt-6 flex flex-wrap items-center gap-2">
       <button
         onClick={() => onChange(null)}
-        className={`btn-chip ${active === null ? 'border-primary bg-primary text-white' : ''}`}
+        className={`btn-chip transition-all duration-200 ease-out active:scale-[0.93] ${active === null ? 'filter-chip-active !border-ink/15 !text-ink' : 'bg-surface/75 backdrop-blur-sm hover:bg-surface/90 border-line/60'}`}
       >
         Alle
       </button>
@@ -221,9 +222,10 @@ export function SubjectFilter({ subjects, active, onChange }) {
           <button
             key={s.id}
             onClick={() => onChange(isActive ? null : s.id)}
-            className={`btn-chip ${isActive ? 'border-primary bg-primary text-white' : ''}`}
+            className={`btn-chip transition-all duration-200 ease-out active:scale-[0.93] ${isActive ? 'filter-chip-active' : 'bg-surface/75 backdrop-blur-sm hover:bg-surface/90 border-line/60'}`}
+            style={isActive ? { background: `color-mix(in srgb, ${s.color} 13%, rgba(255,255,255,0.78))`, borderColor: `color-mix(in srgb, ${s.color} 22%, rgba(23,33,31,0.12))`, color: 'var(--color-ink)' } : undefined}
           >
-            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: isActive ? '#fff' : s.color }} />
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
             {s.short}
           </button>
         )
@@ -243,7 +245,7 @@ export function DeadlineStrip({ assignments = [], exams = [], subjects }) {
     .slice(0, 5)
   if (upcoming.length === 0) return null
   return (
-    <div className="mt-6 rounded-lg border border-line bg-surface p-4">
+    <div className="mt-6 rounded-lg card-glass p-4 card-lift">
       <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Nærmeste frister</h2>
       <ul className="mt-2 space-y-1.5">
         {upcoming.map((a) => (

@@ -492,8 +492,14 @@ export default function App() {
   const conflictCount = conflictIds.size
 
   return (
-    <div className="min-h-screen">
-      <header className="mx-auto max-w-5xl px-4 pb-6 pt-5 sm:pt-8">
+    <div className="min-h-screen relative">
+      {/* Subtile bakgrunns-orbs – glass morphism dybde */}
+      <div className="orb-wrap" aria-hidden="true">
+        <div className="orb orb-1" />
+        <div className="orb orb-2" />
+        <div className="orb orb-3" />
+      </div>
+      <header className="mx-auto max-w-5xl px-4 pb-6 pt-5 sm:pt-8 animate-fade-in">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <a
             href="https://github.com/BigKATZE/Studieplanlegger"
@@ -584,7 +590,7 @@ export default function App() {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`-mb-px min-h-10 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold transition-colors ${
-                tab === t.id ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-ink'
+                tab === t.id ? 'border-primary text-primary tab-active' : 'border-transparent text-muted hover:text-ink'
               }`}
             >
               {t.label}
@@ -607,7 +613,7 @@ export default function App() {
 
       <main className="mx-auto max-w-5xl px-4 pb-20">
         {tab === 'overview' && (
-          <>
+          <div key="overview" className="animate-enter">
             <UpcomingAgenda
               lectures={data.lectures}
               readings={data.readings}
@@ -637,80 +643,90 @@ export default function App() {
               exams={data.exams}
               subjects={data.subjects}
             />
-          </>
+          </div>
         )}
 
         {tab === 'timeplan' && (
-          <>
+          <div key="timeplan" className="animate-enter">
             <SubjectFilter subjects={data.subjects} active={filterSubjectId} onChange={setFilterSubjectId} />
-            <Timeplan
-              lectures={bySubject(data.lectures)}
-              subjects={data.subjects}
-              week={timeplanWeek}
-              onWeekChange={setTimeplanWeek}
-              onToggleLecture={actions.toggleLecture}
-              onToggleChapter={actions.toggleChapter}
-              onUpdateChapter={actions.updateChapter}
-              onRemoveChapter={actions.removeChapter}
-              onRemoveLecture={actions.removeLecture}
-              onEditLecture={(l) => openEdit('lecture', l)}
-              weekTemplates={data.weekTemplates}
-              onSaveTemplate={saveTemplate}
-              onApplyTemplate={applyTemplate}
-              onRemoveTemplate={(id) => update((d) => ({ ...d, weekTemplates: d.weekTemplates.filter((template) => template.id !== id) }))}
-              conflictIds={conflictIds}
-            />
-          </>
+            <div key={filterSubjectId ?? 'all'} className="animate-enter">
+              <Timeplan
+                lectures={bySubject(data.lectures)}
+                subjects={data.subjects}
+                week={timeplanWeek}
+                onWeekChange={setTimeplanWeek}
+                onToggleLecture={actions.toggleLecture}
+                onToggleChapter={actions.toggleChapter}
+                onUpdateChapter={actions.updateChapter}
+                onRemoveChapter={actions.removeChapter}
+                onRemoveLecture={actions.removeLecture}
+                onEditLecture={(l) => openEdit('lecture', l)}
+                weekTemplates={data.weekTemplates}
+                onSaveTemplate={saveTemplate}
+                onApplyTemplate={applyTemplate}
+                onRemoveTemplate={(id) => update((d) => ({ ...d, weekTemplates: d.weekTemplates.filter((template) => template.id !== id) }))}
+                conflictIds={conflictIds}
+              />
+            </div>
+          </div>
         )}
 
         {tab === 'reading' && (
-          <>
+          <div key="reading" className="animate-enter">
             <SubjectFilter subjects={data.subjects} active={filterSubjectId} onChange={setFilterSubjectId} />
-            <Pensum
-              readings={bySubject(data.readings)}
-              subjects={data.subjects}
-              onToggleReading={actions.toggleReading}
-              onToggleReadingChapter={actions.toggleReadingChapter}
-              onRemoveReading={actions.removeReading}
-              onEditReading={(r) => openEdit('reading', r)}
-            />
-          </>
+            <div key={filterSubjectId ?? 'all'} className="animate-enter">
+              <Pensum
+                readings={bySubject(data.readings)}
+                subjects={data.subjects}
+                onToggleReading={actions.toggleReading}
+                onToggleReadingChapter={actions.toggleReadingChapter}
+                onRemoveReading={actions.removeReading}
+                onEditReading={(r) => openEdit('reading', r)}
+              />
+            </div>
+          </div>
         )}
 
         {tab === 'tasks' && (
-          <>
+          <div key="tasks" className="animate-enter">
             <SubjectFilter subjects={data.subjects} active={filterSubjectId} onChange={setFilterSubjectId} />
-            <Gjøremål
-              assignments={bySubject(data.assignments)}
-              subjects={data.subjects}
-              onSetAssignmentStatus={actions.setAssignmentStatus}
-              onRemoveAssignment={actions.removeAssignment}
-              onEditAssignment={(a) => openEdit('assignment', a)}
-            />
-            <WorkPlans plans={data.workPlans} subjects={data.subjects} onToggle={actions.toggleWorkPlanStep} onRemove={actions.removeWorkPlan} onShare={setSharePlan} canShare={Boolean(hasSupabase && user && user.id !== 'local')} />
-          </>
+            <div key={filterSubjectId ?? 'all'} className="animate-enter">
+              <Gjøremål
+                assignments={bySubject(data.assignments)}
+                subjects={data.subjects}
+                onSetAssignmentStatus={actions.setAssignmentStatus}
+                onRemoveAssignment={actions.removeAssignment}
+                onEditAssignment={(a) => openEdit('assignment', a)}
+              />
+              <WorkPlans plans={data.workPlans} subjects={data.subjects} onToggle={actions.toggleWorkPlanStep} onRemove={actions.removeWorkPlan} onShare={setSharePlan} canShare={Boolean(hasSupabase && user && user.id !== 'local')} />
+            </div>
+          </div>
         )}
 
         {tab === 'exams' && (
-          <>
+          <div key="exams" className="animate-enter">
             <SubjectFilter subjects={data.subjects} active={filterSubjectId} onChange={setFilterSubjectId} />
-            <Eksamener
-              exams={bySubject(data.exams)}
-              subjects={data.subjects}
-              data={data}
-              onRemoveExam={actions.removeExam}
-              onEditExam={(e) => openEdit('exam', e)}
-            />
-          </>
+            <div key={filterSubjectId ?? 'all'} className="animate-enter">
+              <Eksamener
+                exams={bySubject(data.exams)}
+                subjects={data.subjects}
+                data={data}
+                onRemoveExam={actions.removeExam}
+                onEditExam={(e) => openEdit('exam', e)}
+              />
+            </div>
+          </div>
         )}
 
         {tab === 'ai' && (
+          <div key="ai" className="animate-enter">
           <Suspense fallback={<p role="status" className="mt-8 text-sm text-muted">Laster AI-verktøy…</p>}>
             <AiTools data={data} enabled={Boolean(hasSupabase && user && user.id !== 'local')} onAddReview={actions.addReviewUnique} onAddSource={actions.addSource} onRemoveSource={actions.removeSource} onAddAttempt={actions.addQuizAttempt} onSaveWorkPlan={actions.saveWorkPlan} />
           </Suspense>
+          </div>
         )}
 
-        {tab === 'changelog' && <Changelog />}
+        {tab === 'changelog' && <div key="changelog" className="animate-enter"><Changelog /></div>}
       </main>
 
       <footer className="mx-auto max-w-5xl px-4 pb-10">
@@ -798,7 +814,7 @@ export default function App() {
       {focusTarget !== null && <FocusMode items={focusItems} initialTarget={focusTarget?.key} onClose={() => setFocusTarget(null)} onComplete={finishFocusItem} />}
 
       {undo && undo.userId === (user?.id ?? 'local') && (
-        <div className="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg border border-line bg-surface px-4 py-2.5 text-sm shadow-lg">
+        <div className="animate-scale-in glass-panel fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-lg px-4 py-2.5 text-sm">
           <span className="text-ink">{undo.label}</span>
           <button onClick={onUndo} className="font-medium text-primary hover:underline">
             Angre

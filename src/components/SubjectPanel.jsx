@@ -34,12 +34,12 @@ export default function SubjectPanel({ subjects, lectures, readings, assignments
         <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Fag &amp; fremdrift</h2>
         <WeekFilter weeks={weeks} active={week} onChange={setWeek} />
       </div>
-      <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="stagger mt-3 grid min-w-0 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {subjects.map((s) => {
           const st = stats.get(s.id)
           const level = s.levelOverride ?? overallLevels.get(s.id)
           return (
-            <div key={s.id} className="app-surface min-w-0 overflow-hidden p-3 sm:p-4">
+            <div key={s.id} className="app-surface card-glass card-lift min-w-0 p-3 sm:p-4 relative overflow-visible">
               <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                 <span className="chip subject-chip min-w-0 max-w-full truncate" style={{ '--subject-color': s.color || '#146c54' }}>
                   {s.short || s.name}

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { SubjectChip } from './ui'
+import { SubjectChip, Select } from './ui'
 import { iso } from '../lib/date'
 
 export default function ReviewPlan({ reviews, subjects, onAdd, onComplete, onDefer, onRemove }) {
@@ -17,16 +17,21 @@ export default function ReviewPlan({ reviews, subjects, onAdd, onComplete, onDef
   }
   const sorted = [...reviews].sort((a, b) => a.nextReview.localeCompare(b.nextReview))
   return (
-    <section className="mt-8 rounded-lg border border-line bg-surface p-4">
+    <section className="mt-8 rounded-lg card-glass p-4 card-lift">
       <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Repetisjonsplan</h2>
       <form onSubmit={submit} className="mt-3 grid gap-2 sm:grid-cols-4">
         <label className="sr-only" htmlFor="review-title">Hva vil du repetere?</label>
         <input id="review-title" value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Hva vil du repetere?" className="rounded-md border border-line bg-paper px-3 py-2 text-sm" required />
         <label className="sr-only" htmlFor="review-details">Notat eller svar</label>
         <input id="review-details" value={details} onChange={(event) => setDetails(event.target.value)} placeholder="Notat eller svar" className="rounded-md border border-line bg-paper px-3 py-2 text-sm" />
-        <select aria-label="Fag for repetisjon" value={subjectId} onChange={(event) => setSubjectId(event.target.value)} className="rounded-md border border-line bg-paper px-3 py-2 text-sm">
-          <option value="">Uten fag</option>{subjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.short || subject.name}</option>)}
-        </select>
+        <Select
+          value={subjectId}
+          onChange={setSubjectId}
+          options={[{ value: '', label: 'Uten fag' }, ...subjects.map((subject) => ({ value: subject.id, label: subject.short || subject.name }))]}
+          ariaLabel="Fag for repetisjon"
+          placeholder="Uten fag"
+          className="min-w-0"
+        />
         <button className="btn-primary" type="submit">Legg til</button>
       </form>
       {sorted.length === 0 ? <p className="mt-3 text-sm text-muted">Ingen repetisjoner ennå. Legg til et spørsmål eller bruk AI-spørsmålene.</p> : (
