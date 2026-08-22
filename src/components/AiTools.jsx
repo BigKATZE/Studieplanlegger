@@ -537,7 +537,7 @@ export default function AiTools({ data, enabled, onAddReview, onAddSource, onRem
         </section>
       )}
 
-      <p className="mt-4 text-xs text-muted">Teksten sendes til Gemini. Maks 25 forespørsler per bruker per dag.</p>
+      <p className="mt-4 text-xs text-muted">Teksten sendes til Gemini. Maks 100 forespørsler per bruker per dag.</p>
     </section>
   )
 }
