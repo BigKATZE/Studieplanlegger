@@ -3,6 +3,13 @@ import { uid, SUBJECT_COLORS } from '../lib/store'
 import { isoWeek, weekRange } from '../lib/date'
 import { Select, DateField, TimeField } from './ui'
 
+const COLOR_NAMES = {
+  '#7c3aed': 'Fiolett', '#2563eb': 'Kongeblå', '#059669': 'Smaragd', '#d97706': 'Oker', '#dc2626': 'Rød', '#0d9488': 'Turkis',
+  '#db2777': 'Bringebær', '#4f46e5': 'Indigo', '#ea580c': 'Oransje', '#0891b2': 'Sjøblå', '#65a30d': 'Lime', '#c026d3': 'Magenta',
+  '#e11d48': 'Korall', '#16a34a': 'Skoggrønn', '#f59e0b': 'Rav', '#9333ea': 'Lilla', '#0f766e': 'Mose', '#ca8a04': 'Sennep',
+  '#ec4899': 'Rosa', '#14b8a6': 'Mint', '#0369a1': 'Havblå', '#a21caf': 'Plomme', '#f97316': 'Terrakotta', '#06b6d4': 'Himmel', '#4d7c0f': 'Oliven', '#1d4ed8': 'Marine',
+}
+
 export function Modal({ title, onClose, children }) {
   const panelRef = useRef(null)
   useEffect(() => {
@@ -33,10 +40,12 @@ export function Modal({ title, onClose, children }) {
           <h2 className="font-display text-lg font-semibold">{title}</h2>
           <button
             onClick={onClose}
-            className="rounded p-1 text-muted hover:bg-paper hover:text-ink"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent text-muted transition-all duration-200 hover:border-line hover:bg-surface hover:text-ink hover:shadow-sm active:scale-95"
             aria-label="Lukk"
           >
-            ✕
+            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" className="h-4 w-4">
+              <path d="M6 6 14 14M14 6 6 14" />
+            </svg>
           </button>
         </div>
         {children}
@@ -101,13 +110,13 @@ export function SubjectForm({ onAdd, onClose, initial }) {
                 onClick={() => setColor(c)}
                 className={`h-7 w-7 rounded-full border-2 transition-all hover:scale-110 hover:shadow-md ${color === c ? 'border-ink ring-2 ring-ink/10 scale-110' : 'border-transparent hover:border-line'}`}
                 style={{ backgroundColor: c }}
-                aria-label={`Farge ${c}`}
+                aria-label={COLOR_NAMES[c] || c}
               />
               <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2.5 hidden -translate-x-1/2 group-hover:block group-focus-within:block">
                 <div className="animate-scale-in whitespace-nowrap rounded-lg bg-ink px-2.5 py-1.5 text-xs font-medium text-paper shadow-xl">
                   <span className="flex items-center gap-1.5">
                     <span className="h-3 w-3 rounded-full border border-white/20 shadow-sm" style={{ backgroundColor: c }} />
-                    {c.toUpperCase()}
+                    {COLOR_NAMES[c] || c}
                   </span>
                   <div className="absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1 rotate-45 bg-ink" />
                 </div>

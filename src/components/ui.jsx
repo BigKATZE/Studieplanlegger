@@ -212,7 +212,7 @@ export function SubjectFilter({ subjects, active, onChange }) {
     <div className="mt-6 flex flex-wrap items-center gap-2">
       <button
         onClick={() => onChange(null)}
-        className={`btn-chip transition-all duration-200 ease-out active:scale-[0.93] ${active === null ? 'filter-chip-active !border-ink/15 !text-ink' : 'bg-surface/75 backdrop-blur-sm hover:bg-surface/90 border-line/60'}`}
+        className={`btn-chip transition-all duration-200 ease-out active:scale-[0.93] backdrop-blur-[14px] backdrop-saturate-[165%] supports-[backdrop-filter]:backdrop-blur-[14px] ${active === null ? 'filter-chip-active !border-ink/15 !text-ink shadow-[0_4px_14px_rgba(23,33,31,0.06)]' : 'bg-surface/45 border-0 shadow-[0_2px_12px_rgba(23,33,31,0.05)] hover:bg-surface/65 hover:shadow-[0_4px_16px_rgba(23,33,31,0.07)]'}`}
       >
         Alle
       </button>
@@ -222,8 +222,17 @@ export function SubjectFilter({ subjects, active, onChange }) {
           <button
             key={s.id}
             onClick={() => onChange(isActive ? null : s.id)}
-            className={`btn-chip transition-all duration-200 ease-out active:scale-[0.93] ${isActive ? 'filter-chip-active' : 'bg-surface/75 backdrop-blur-sm hover:bg-surface/90 border-line/60'}`}
-            style={isActive ? { background: `color-mix(in srgb, ${s.color} 13%, rgba(255,255,255,0.78))`, borderColor: `color-mix(in srgb, ${s.color} 22%, rgba(23,33,31,0.12))`, color: 'var(--color-ink)' } : undefined}
+            className={`btn-chip transition-all duration-200 ease-out active:scale-[0.93] ${isActive ? 'filter-chip-active shadow-[0_4px_14px_rgba(23,33,31,0.07)]' : 'bg-surface/45 backdrop-blur-[14px] backdrop-saturate-[165%] supports-[backdrop-filter]:backdrop-blur-[14px] border-0 shadow-[0_2px_12px_rgba(23,33,31,0.05)] hover:bg-surface/65 hover:shadow-[0_4px_16px_rgba(23,33,31,0.07)]'}`}
+            style={
+              isActive
+                ? {
+                    background: `color-mix(in srgb, ${s.color} 10%, rgba(255,255,255,0.26))`,
+                    borderColor: `color-mix(in srgb, ${s.color} 20%, rgba(255,255,255,0.32))`,
+                    color: 'var(--color-ink)',
+                    boxShadow: `0 4px 14px color-mix(in srgb, ${s.color} 7%, transparent), inset 0 1px 0 rgba(255,255,255,0.32)`,
+                  }
+                : undefined
+            }
           >
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: s.color }} />
             {s.short}

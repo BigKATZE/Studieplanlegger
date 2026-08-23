@@ -4,7 +4,7 @@ import { SubjectChip, WeekFilter } from './ui'
 import { findLectureConflictIds } from '../lib/plannerFeatures'
 import WeekTemplates from './WeekTemplates'
 
-export default function Timeplan({ lectures, subjects, week, onWeekChange, onToggleLecture, onToggleChapter, onUpdateChapter, onRemoveChapter, onRemoveLecture, onEditLecture, weekTemplates = [], onSaveTemplate, onApplyTemplate, onRemoveTemplate, conflictIds: suppliedConflictIds }) {
+export default function Timeplan({ lectures, subjects, week, onWeekChange, onToggleLecture, onSetLectureAttendance, onToggleChapter, onUpdateChapter, onRemoveChapter, onRemoveLecture, onEditLecture, weekTemplates = [], onSaveTemplate, onApplyTemplate, onRemoveTemplate, conflictIds: suppliedConflictIds }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
   const [editingChapter, setEditingChapter] = useState(null)
   const [chapterText, setChapterText] = useState('')
@@ -44,9 +44,24 @@ export default function Timeplan({ lectures, subjects, week, onWeekChange, onTog
           const g = groupsByWeek.get(w)
           return (
             <div key={w}>
-              <div className="flex items-baseline gap-3">
-                <h3 className="font-display text-lg font-semibold">Uke {w}</h3>
-                <span className="text-xs text-muted">{weekRangeByWeek(w)}</span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-baseline gap-3">
+                  <h3 className="font-display text-lg font-semibold">Uke {w}</h3>
+                  <span className="text-xs text-muted">{weekRangeByWeek(w)}</span>
+                </div>
+                {g?.lectures.length > 0 && onSetLectureAttendance && (() => {
+                  const allDone = g.lectures.every((l) => l.done)
+                  return (
+                    <button
+                      onClick={() => onSetLectureAttendance(g.lectures.map((l) => l.id), !allDone)}
+                      title={allDone ? 'Fjern markering for uken' : 'Marker alle i uken som deltatt'}
+                      aria-label={allDone ? `Fjern markering for uke ${w}` : `Marker alle i uke ${w} som deltatt`}
+                      className={`inline-flex h-6 shrink-0 items-center rounded-full border px-2.5 text-xs font-medium transition-all duration-200 active:scale-95 ${allDone ? 'border-secondary bg-secondary text-white shadow-sm' : 'border-line bg-surface text-muted hover:border-secondary/40 hover:text-ink'}`}
+                    >
+                      {allDone ? 'Fjern alle' : 'Marker alle'}
+                    </button>
+                  )
+                })()}
               </div>
               <div className="mt-2 space-y-2">
                 {g?.lectures.map((l) => {
@@ -55,18 +70,22 @@ export default function Timeplan({ lectures, subjects, week, onWeekChange, onTog
                 return (
                   <div key={l.id} className="rounded-lg border border-line bg-surface p-4">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                      <button
+                        onClick={() => onToggleLecture(l.id)}
+                        aria-pressed={l.done}
+                        aria-label={l.done ? 'Fjern deltakelse' : 'Marker som deltatt'}
+                        title={l.done ? 'Fjern deltakelse' : 'Marker som deltatt'}
+                        className={`inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-all duration-200 active:scale-95 ${l.done ? 'border-secondary bg-secondary text-white shadow-sm' : 'border-line bg-surface text-muted hover:border-secondary/40 hover:text-ink'}`}
+                      >
+                        <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`h-3 w-3 transition-opacity ${l.done ? 'opacity-100' : 'opacity-45'}`}>
+                          <path d="M2.8 6.2 5 8.4 9.2 3.6" />
+                        </svg>
+                        {l.done ? 'Deltatt' : null}
+                      </button>
                       <div className="flex items-center gap-1.5">
-                        <label className="flex cursor-pointer items-center gap-2 text-sm" title="Merket forelesning = deltatt / gjennomgått">
-                          <input
-                            type="checkbox"
-                            checked={l.done}
-                            onChange={() => onToggleLecture(l.id)}
-                            className="h-4 w-4 accent-secondary"
-                          />
-                          <span className="font-medium">
-                            {weekdayShort(date)} {fmtShort(date)}
-                          </span>
-                        </label>
+                        <span className="font-medium">
+                          {weekdayShort(date)} {fmtShort(date)}
+                        </span>
                         <span className="text-sm">{l.start}-{l.end}</span>
                       </div>
                       {subject && <SubjectChip subject={subject} />}

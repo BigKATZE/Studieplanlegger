@@ -293,6 +293,13 @@ export default function App() {
         return { ...lecture, done, completedAt: done ? new Date().toISOString() : '' }
       }),
     })),
+    setLectureAttendance: (ids, done) => {
+      const set = new Set(ids)
+      update((d) => ({
+        ...d,
+        lectures: d.lectures.map((lecture) => (set.has(lecture.id) ? { ...lecture, done, completedAt: done ? (lecture.completedAt || new Date().toISOString()) : '' } : lecture)),
+      }))
+    },
     setAssignmentStatus: (id, status) => update((d) => ({
       ...d,
       assignments: d.assignments.map((assignment) => {
@@ -501,62 +508,85 @@ export default function App() {
       </div>
       <header className="mx-auto max-w-5xl px-4 pb-6 pt-5 sm:pt-8 animate-fade-in">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          <a
-            href="https://github.com/BigKATZE/Studieplanlegger"
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Åpne GitHub-repositoriet"
-            title="GitHub"
-            className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-[10px] text-ink transition-colors hover:bg-surface hover:text-primary"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.3c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.6 5 18.6 5.3 18.6 5.3c.7 1.7.3 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3Z" />
-            </svg>
-          </a>
-          <div className="flex flex-wrap items-center justify-end gap-x-1 gap-y-2 text-right">
-          <span role="status" aria-live="polite" className={`text-xs ${syncStatus === 'error' ? 'text-danger' : 'text-muted'}`}>
-            {{ local: 'Lagret lokalt', loading: 'Kobler til…', saving: 'Lagrer…', saved: 'Synkronisert', conflict: 'Oppdatert fra annen enhet', error: 'Synkfeil' }[syncStatus]}
-          </span>
+          <div className="flex items-center gap-2.5">
+            <a
+              href="https://github.com/BigKATZE/Studieplanlegger"
+              target="_blank"
+              rel="noreferrer"
+              aria-label="Åpne GitHub-repositoriet"
+              title="GitHub"
+              className="group inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line/60 bg-surface/80 text-ink shadow-sm backdrop-blur-sm transition-[border-color,background-color,color,box-shadow] duration-200 hover:border-ink/15 hover:bg-surface hover:shadow-md hover:text-primary active:scale-[0.96]"
+            >
+              <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2.3c-3.3.7-4-1.4-4-1.4-.5-1.4-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.6 5 18.6 5.3 18.6 5.3c.7 1.7.3 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3Z" />
+              </svg>
+            </a>
+            <span role="status" aria-live="polite" className={`inline-flex h-9 items-center whitespace-nowrap rounded-xl border px-3 text-xs font-medium shadow-sm backdrop-blur-sm ${syncStatus === 'error' ? 'border-danger/30 bg-danger/10 text-danger' : 'border-line/60 bg-surface/80 text-muted'}`}>
+              {{ local: 'Lagret lokalt', loading: 'Kobler til…', saving: 'Lagrer…', saved: 'Synkronisert', conflict: 'Oppdatert fra annen enhet', error: 'Synkfeil' }[syncStatus]}
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
           <button
             onClick={() => setSearchOpen(true)}
             aria-label="Søk (Ctrl+K)"
             title="Søk (Ctrl+K)"
-            className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-[10px] text-ink transition-colors hover:bg-surface hover:text-primary"
+            className="group inline-flex h-9 w-9 items-center justify-center rounded-xl border border-line/60 bg-surface/80 text-ink shadow-sm backdrop-blur-sm transition-[border-color,background-color,color,box-shadow] duration-200 hover:border-ink/15 hover:bg-surface hover:shadow-md hover:text-primary active:scale-[0.96]"
           >
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+            <svg className="h-[16px] w-[16px]" fill="none" viewBox="0 0 20 20" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M13.5 13.5 17 17M14.8 9.2a5.3 5.3 0 1 1-10.6 0 5.3 5.3 0 0 1 10.6 0Z" />
             </svg>
           </button>
           <button
             onClick={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
             aria-label={theme === 'dark' ? 'Bytt til lys modus' : 'Bytt til mørk modus'}
-            className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-[10px] text-ink transition-colors hover:bg-surface hover:text-primary"
+            aria-pressed={theme === 'dark'}
+            title={theme === 'dark' ? 'Bytt til lys modus' : 'Bytt til mørk modus'}
+            className="group relative inline-flex h-8 w-[56px] shrink-0 items-center rounded-full border border-line bg-surface p-1 shadow-sm transition-all duration-200 hover:border-ink/15 hover:shadow-md active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
           >
-            {theme === 'dark' ? (
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                <circle cx="12" cy="12" r="4" />
-                <path strokeLinecap="round" d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+            {/* statiske spor-ikoner – hint, månen forstørret i lys modus */}
+            <span aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-between px-[6px]">
+              <svg className={`h-3.5 w-3.5 ${theme === 'dark' ? 'text-white/90' : 'text-amber-500'} `} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.05" strokeLinecap="round">
+                <circle cx="12" cy="12" r="4.0" />
+                <path d="M12 1.9v1.85M12 20.25V22.1M4.2 4.2l1.25 1.25M18.55 18.55l1.35 1.35M1.9 12h1.85M20.25 12H22.1M4.2 19.8l1.25-1.25M18.55 5.45l1.35-1.35" />
               </svg>
-            ) : (
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75 9.75 9.75 0 0 1 8.25 6c0-1.33.266-2.597.748-3.752A9.75 9.75 0 0 0 3 11.25 9.75 9.75 0 0 0 12.75 21a9.75 9.75 0 0 0 9.002-5.998Z" />
+              <svg className="h-[14px] w-[14px] text-muted" viewBox="0 0 24 24" style={{ opacity: 0.62 }} aria-hidden="true">
+                <path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+                <path fill="white" opacity="0.11" d="M11.21 3A9 9 0 0 0 8.2 17.5a9 9 0 0 1 9.5-11.7A7 7 0 0 0 11.21 3Z" />
               </svg>
-            )}
+            </span>
+            <span
+              className={`relative z-10 inline-flex h-6 w-6 items-center justify-center rounded-full shadow-[0_1px_4px_rgba(0,0,0,0.16),0_1px_10px_rgba(0,0,0,0.08)] transition-all duration-300 ease-[cubic-bezier(.16,1,.3,1)] ${theme === 'dark' ? 'translate-x-[25px] bg-primary text-[#102019] ring-1 ring-white/10' : 'translate-x-0 bg-surface text-amber-500 ring-1 ring-line'}`}
+            >
+              <span className="relative h-4 w-4">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.05" className={`absolute inset-0 h-4 w-4 transition-all duration-300 ${theme === 'dark' ? 'scale-0 -rotate-90 opacity-0' : 'scale-100 rotate-0 opacity-100'}`}>
+                  <circle cx="12" cy="12" r="4.0" />
+                  <path strokeLinecap="round" d="M12 2.1v1.7M12 20.2V22M4.15 4.15l1.2 1.2M18.65 18.65l1.2 1.2M2.1 12h1.7M20.2 12H22M4.15 19.85l1.2-1.2M18.65 5.35l1.2-1.2" />
+                </svg>
+                {/* måne – tykkere sigd (9/7) + myk skyggekant + kratere */}
+                <svg aria-hidden="true" viewBox="0 0 24 24" className={`absolute inset-0 h-[18px] w-[18px] -m-px translate-x-[0.5px] transition-all duration-300 ${theme === 'dark' ? 'scale-100 rotate-0 opacity-100' : 'scale-0 rotate-90 opacity-0'}`}>
+                  <path fill="currentColor" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+                  {/* indre skygge-kant gir volum uten filter */}
+                  <path fill="white" opacity="0.09" d="M11.21 3A9 9 0 0 0 8.2 17.5a9 9 0 0 1 9.5-11.7A7 7 0 0 0 11.21 3Z" />
+                  {/* kratere – svært lav kontrast, bare anelse av overflate */}
+                  <circle cx="15.1" cy="7.9" r="1.25" fill="white" opacity="0.13" />
+                  <circle cx="13.4" cy="11.4" r="0.78" fill="white" opacity="0.11" />
+                  <circle cx="15.8" cy="12.2" r="0.45" fill="white" opacity="0.08" />
+                </svg>
+              </span>
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setTab('changelog')}
             aria-current={tab === 'changelog' ? 'page' : undefined}
-            className={`min-h-10 rounded-[10px] px-2 text-sm transition-colors hover:bg-surface hover:text-ink ${
-              tab === 'changelog' ? 'font-semibold text-primary' : 'text-muted'
-            }`}
+            className={`inline-flex h-9 items-center justify-center rounded-xl border px-3 text-sm font-medium shadow-sm backdrop-blur-sm transition-[border-color,background-color,color,box-shadow] duration-200 active:scale-[0.96] ${tab === 'changelog' ? 'border-ink/15 bg-surface text-ink shadow-md' : 'border-line/60 bg-surface/80 text-muted hover:border-ink/15 hover:bg-surface hover:text-ink hover:shadow-md'}`}
           >
             Changelog
           </button>
           {hasSupabase && !user && (
             <button
               onClick={() => setShowLogin(true)}
-              className="min-h-10 rounded-[10px] px-2 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
+              className="inline-flex h-9 items-center justify-center rounded-xl border border-line/60 bg-surface/80 px-3 text-sm font-medium text-muted shadow-sm backdrop-blur-sm transition-[border-color,background-color,color,box-shadow] duration-200 hover:border-ink/15 hover:bg-surface hover:text-ink hover:shadow-md active:scale-[0.96]"
             >
               Logg inn
             </button>
@@ -565,13 +595,13 @@ export default function App() {
             <>
               <button
                 onClick={() => openModal('password')}
-                className="min-h-10 rounded-[10px] px-2 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-line/60 bg-surface/80 px-3 text-sm font-medium text-muted shadow-sm backdrop-blur-sm transition-[border-color,background-color,color,box-shadow] duration-200 hover:border-ink/15 hover:bg-surface hover:text-ink hover:shadow-md active:scale-[0.96]"
               >
                 Endre passord
               </button>
               <button
                 onClick={() => supabase.auth.signOut()}
-                className="min-h-10 rounded-[10px] px-2 text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
+                className="inline-flex h-9 items-center justify-center rounded-xl border border-line/60 bg-surface/80 px-3 text-sm font-medium text-muted shadow-sm backdrop-blur-sm transition-[border-color,background-color,color,box-shadow] duration-200 hover:border-ink/15 hover:bg-surface hover:text-ink hover:shadow-md active:scale-[0.96]"
               >
                 Logg ut
               </button>
@@ -580,16 +610,18 @@ export default function App() {
           </div>
         </div>
         <h1 className="font-display text-3xl font-bold tracking-[-.03em] sm:text-4xl">Studieplanlegger</h1>
-        <p className="mt-1 text-sm text-muted">Timeplan, pensum, arbeidskrav og eksamener - uke for uke.</p>
+        <div className="mt-3 h-[3px] w-12 rounded-full bg-[#141414]" aria-hidden="true" />
+        <p className="mt-3 text-sm text-muted">Timeplan, pensum, arbeidskrav og eksamener - uke for uke.</p>
 
         <SmartInput subjects={data.subjects} onApply={applySmartAction} />
 
-        <nav className="tab-strip mt-6 flex gap-1 overflow-x-auto border-b border-line pb-px" aria-label="Sider">
+        <nav className="tab-strip mt-7 flex gap-1 overflow-x-auto border-b border-line" aria-label="Sider">
           {TABS.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`-mb-px min-h-10 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-semibold transition-colors ${
+              aria-current={tab === t.id ? 'page' : undefined}
+              className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors duration-150 ${
                 tab === t.id ? 'border-primary text-primary tab-active' : 'border-transparent text-muted hover:text-ink'
               }`}
             >
@@ -613,7 +645,7 @@ export default function App() {
 
       <main className="mx-auto max-w-5xl px-4 pb-20">
         {tab === 'overview' && (
-          <div key="overview" className="animate-enter">
+          <div key="overview">
             <UpcomingAgenda
               lectures={data.lectures}
               readings={data.readings}
@@ -647,7 +679,7 @@ export default function App() {
         )}
 
         {tab === 'timeplan' && (
-          <div key="timeplan" className="animate-enter">
+          <div key="timeplan">
             <SubjectFilter subjects={data.subjects} active={filterSubjectId} onChange={setFilterSubjectId} />
             <div key={filterSubjectId ?? 'all'} className="animate-enter">
               <Timeplan
@@ -656,6 +688,7 @@ export default function App() {
                 week={timeplanWeek}
                 onWeekChange={setTimeplanWeek}
                 onToggleLecture={actions.toggleLecture}
+                onSetLectureAttendance={actions.setLectureAttendance}
                 onToggleChapter={actions.toggleChapter}
                 onUpdateChapter={actions.updateChapter}
                 onRemoveChapter={actions.removeChapter}
@@ -672,7 +705,7 @@ export default function App() {
         )}
 
         {tab === 'reading' && (
-          <div key="reading" className="animate-enter">
+          <div key="reading">
             <SubjectFilter subjects={data.subjects} active={filterSubjectId} onChange={setFilterSubjectId} />
             <div key={filterSubjectId ?? 'all'} className="animate-enter">
               <Pensum
@@ -688,7 +721,7 @@ export default function App() {
         )}
 
         {tab === 'tasks' && (
-          <div key="tasks" className="animate-enter">
+          <div key="tasks">
             <SubjectFilter subjects={data.subjects} active={filterSubjectId} onChange={setFilterSubjectId} />
             <div key={filterSubjectId ?? 'all'} className="animate-enter">
               <Gjøremål
@@ -704,7 +737,7 @@ export default function App() {
         )}
 
         {tab === 'exams' && (
-          <div key="exams" className="animate-enter">
+          <div key="exams">
             <SubjectFilter subjects={data.subjects} active={filterSubjectId} onChange={setFilterSubjectId} />
             <div key={filterSubjectId ?? 'all'} className="animate-enter">
               <Eksamener
@@ -719,14 +752,14 @@ export default function App() {
         )}
 
         {tab === 'ai' && (
-          <div key="ai" className="animate-enter">
+          <div key="ai">
           <Suspense fallback={<p role="status" className="mt-8 text-sm text-muted">Laster AI-verktøy…</p>}>
             <AiTools data={data} enabled={Boolean(hasSupabase && user && user.id !== 'local')} onAddReview={actions.addReviewUnique} onAddSource={actions.addSource} onRemoveSource={actions.removeSource} onAddAttempt={actions.addQuizAttempt} onSaveWorkPlan={actions.saveWorkPlan} />
           </Suspense>
           </div>
         )}
 
-        {tab === 'changelog' && <div key="changelog" className="animate-enter"><Changelog /></div>}
+        {tab === 'changelog' && <div key="changelog"><Changelog /></div>}
       </main>
 
       <footer className="mx-auto max-w-5xl px-4 pb-10">

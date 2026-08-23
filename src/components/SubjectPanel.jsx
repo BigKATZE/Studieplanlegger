@@ -39,9 +39,12 @@ export default function SubjectPanel({ subjects, lectures, readings, assignments
           const st = stats.get(s.id)
           const level = s.levelOverride ?? overallLevels.get(s.id)
           return (
-            <div key={s.id} className="app-surface card-glass card-lift min-w-0 p-3 sm:p-4 relative overflow-visible">
+            <div key={s.id} className="app-surface card-glass card-lift min-w-0 p-3 sm:p-4 pt-4 relative overflow-visible">
+              <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[14px]" aria-hidden="true">
+                <div className="absolute left-0 right-0 top-0 h-[3px] opacity-60" style={{ background: `linear-gradient(90deg, color-mix(in srgb, ${s.color || '#146c54'} 62%, var(--color-surface)) 0%, color-mix(in srgb, ${s.color || '#146c54'} 18%, transparent) 100%)` }} />
+              </div>
               <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-                <span className="chip subject-chip min-w-0 max-w-full truncate" style={{ '--subject-color': s.color || '#146c54' }}>
+                <span className="chip subject-chip min-w-0 max-w-full truncate shadow-sm" style={{ '--subject-color': s.color || '#146c54' }}>
                   {s.short || s.name}
                 </span>
                 <div className="flex min-w-0 flex-wrap items-center gap-1 sm:gap-2">
@@ -125,11 +128,11 @@ function ProgressRow({ label, done, total }) {
   return (
     <div>
       <div className="mb-1 flex justify-between text-xs">
-        <span className="text-muted">{label}</span>
+        <span className="font-medium text-muted">{label}</span>
         <span className="font-mono text-muted">{done}/{total}</span>
       </div>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-line">
-        <div className="h-full rounded-full bg-secondary transition-all duration-300" style={{ width: `${pct * 100}%` }} />
+      <div className="h-2 w-full overflow-hidden rounded-full bg-line/70 p-[2px]">
+        <div className="h-full rounded-full bg-secondary shadow-sm transition-all duration-500 ease-out" style={{ width: `${pct * 100}%` }} />
       </div>
     </div>
   )

@@ -41,7 +41,7 @@ export default function ReviewPlan({ reviews, subjects, onAdd, onComplete, onDef
             return <li key={review.id} className="flex flex-wrap items-center gap-2 py-2 text-sm">
               <span className={`font-medium ${due ? 'text-warning' : 'text-muted'}`}>{due ? (review.nextReview < today ? 'Forfalt' : 'I dag') : review.nextReview}</span>
               <span className="font-medium">{review.title}</span>
-              {review.details && <details className="text-muted"><summary className="cursor-pointer text-secondary">Vis notat</summary><p className="mt-1 max-w-prose whitespace-pre-wrap">{review.details}</p></details>}
+              {review.details && <details className="text-muted"><summary className="cursor-default text-secondary">Vis notat</summary><p className="mt-1 max-w-prose whitespace-pre-wrap">{review.details}</p></details>}
               <SubjectChip subject={subjects.find((subject) => subject.id === review.subjectId)} />
               <div className="ml-auto flex gap-1">
                 <button className="btn-ghost !min-h-8 !px-2 !py-1 text-xs" onClick={() => onComplete(review.id)}>Ferdig</button>

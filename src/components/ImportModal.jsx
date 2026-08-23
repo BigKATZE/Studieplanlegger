@@ -87,10 +87,12 @@ function PdfImport({ subjects, onImport, onClose }) {
               <div key={i} className="flex flex-wrap items-center gap-2 rounded-md border border-line bg-paper/60 p-2">
                 <button
                   onClick={() => remove(i)}
-                  className="rounded px-1 text-xs text-muted hover:bg-paper hover:text-danger"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-transparent text-muted transition-all duration-200 hover:border-line hover:bg-surface hover:text-danger hover:shadow-sm active:scale-95"
                   aria-label="Fjern rad"
                 >
-                  ✕
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true" className="h-3.5 w-3.5">
+                    <path d="M6 6 14 14M14 6 6 14" />
+                  </svg>
                 </button>
                 <DateField
                   value={r.date}

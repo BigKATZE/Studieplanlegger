@@ -1,5 +1,12 @@
 const RELEASES = [
   {
+    version: 'v3.0', date: '2026-08-23', dateLabel: '23. august 2026', title: 'Raskere markering og roligere toppbar', summary: 'Timeplan får uke-markering, navigasjonen er tilbake til stille linje uten animasjon, og toppbaren får helhetlige bokser i lys og mørk modus.', groups: [
+      { title: 'Timeplan', items: ['Ny knapp per uke: «Marker alle» / «Fjern alle» for deltakelse — setter alle forelesninger i uken som deltatt på én gang.', '«Deltatt»-knappen er tom når ikke deltatt og viser hake + «Deltatt» først når den er aktiv.'] },
+      { title: 'Navigasjon', items: ['Hovedfanene er tilbake til underline (stille struktur) — ingen ytre pill-container.', 'Fjernet scale-animasjon på aktiv strek og slide-animasjon ved fanebytte — bytte er nå instant.'] },
+      { title: 'Toppbar', items: ['«Lagret lokalt/Synkronisert» har fått samme boks som GitHub/søk (h-9 rounded-xl, border/shadow) — egen stil ved synkfeil.', '«Changelog», «Logg inn», «Endre passord» og «Logg ut» har fått helhetlige bokser i lys og mørk modus.', 'Sol-toggle i lys modus har ikke lenger svart sirkel — hvit pill med amber sol, mørk beholder grønn pill.', 'Strek under «Studieplanlegger» er nå #141414 (samme som bakgrunnen i mørk modus).', 'Primærfarge i lys modus er myknet: #141414 → #1e1e1e.'] },
+    ],
+  },
+  {
     version: 'v1.2.4', date: '2026-08-22', dateLabel: '22. august 2026', title: 'Mykere detaljer og ryddigere menyer', summary: 'Små visuelle justeringer som gjør navigering og valg roligere, uten å endre flyten.', groups: [
       { title: 'Bevegelse', items: ['Myk innflyvning ved bytte av fane og ved filtrering (I dag/Neste 7 dager, fag-filter).', 'Knapper gir et lite trykk-svar ved klikk.'] },
       { title: 'Design', items: ['Kortene i Oversikt har fått et litt tydeligere, men fortsatt subtilt glassuttrykk med svake bakgrunnsflekker og lett løft ved hover.', 'Vinduer og rullefelt har fått roligere avrunding, skygge og tynn, stilren scrollbar som matcher det minimalistiske uttrykket.'] },

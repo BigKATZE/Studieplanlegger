@@ -39,13 +39,16 @@ export default function Pensum({ readings, subjects, onToggleReading, onToggleRe
           </div>
           <div className="mt-2 space-y-2">
             {noneItems.map((r) => (
-              <div key={r.id} className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-line bg-surface p-4 ${r.done ? 'opacity-50' : ''}`}>
+              <div key={r.id} className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-line bg-surface p-4 ${r.done ? 'opacity-[0.72]' : ''}`}>
                 <button
                   onClick={() => onToggleReading(r.id)}
-                  className="flex h-5 w-5 items-center justify-center rounded border border-line text-xs text-secondary"
+                  className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border text-[11px] transition-all duration-200 active:scale-95 ${r.done ? 'border-secondary bg-secondary text-white shadow-sm' : 'border-line bg-surface text-transparent hover:border-secondary/30 hover:shadow-sm'}`}
                   aria-label="Marker som lest"
+                  aria-pressed={r.done}
                 >
-                  {r.done ? '✓' : ''}
+                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`h-3 w-3 transition-opacity ${r.done ? 'opacity-100' : 'opacity-0'}`}>
+                    <path d="M2.8 6.2 5 8.4 9.2 3.6" />
+                  </svg>
                 </button>
                 <span className={`text-sm font-medium ${r.done ? 'text-muted line-through' : ''}`}>{r.title}</span>
                 <SubjectChip subject={subjectById[r.subjectId]} />
@@ -79,13 +82,16 @@ export default function Pensum({ readings, subjects, onToggleReading, onToggleRe
               </div>
               <div className="mt-2 space-y-2">
                 {items.map((r) => (
-                  <div key={r.id} className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-line bg-surface p-4 ${r.done ? 'opacity-50' : ''}`}>
+                  <div key={r.id} className={`flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-line bg-surface p-4 ${r.done ? 'opacity-[0.72]' : ''}`}>
                     <button
                       onClick={() => onToggleReading(r.id)}
-                      className="flex h-5 w-5 items-center justify-center rounded border border-line text-xs text-secondary"
+                      className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px] border text-[11px] transition-all duration-200 active:scale-95 ${r.done ? 'border-secondary bg-secondary text-white shadow-sm' : 'border-line bg-surface text-transparent hover:border-secondary/30 hover:shadow-sm'}`}
                       aria-label="Marker som lest"
+                      aria-pressed={r.done}
                     >
-                      {r.done ? '✓' : ''}
+                      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={`h-3 w-3 transition-opacity ${r.done ? 'opacity-100' : 'opacity-0'}`}>
+                        <path d="M2.8 6.2 5 8.4 9.2 3.6" />
+                      </svg>
                     </button>
                     <span className={`text-sm font-medium ${r.done ? 'text-muted line-through' : ''}`}>{r.title}</span>
                     <SubjectChip subject={subjectById[r.subjectId]} />
@@ -108,8 +114,8 @@ export default function Pensum({ readings, subjects, onToggleReading, onToggleRe
                         <p className="text-xs font-medium text-muted">{(r.chapters?.length ?? 0) === 1 ? 'Kapittel:' : 'Kapitler:'}</p>
                         <ul className="space-y-1">
                         {r.chapters.map((c) => (
-                          <li key={c.id}>
-                            <label className="flex cursor-pointer items-center gap-2 text-sm">
+                            <li key={c.id}>
+                              <label className="flex cursor-default items-center gap-2 text-sm">
                               <input
                                 type="checkbox"
                                 checked={c.done}
