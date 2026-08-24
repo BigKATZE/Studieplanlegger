@@ -25,6 +25,8 @@ import ReschedulePanel from './components/ReschedulePanel'
 import WorkPlans from './components/WorkPlans'
 import SharePlanModal from './components/SharePlanModal'
 import DeltArbeidsplan from './components/DeltArbeidsplan'
+import ShareSemesterModal from './components/ShareSemesterModal'
+import DeltOversikt from './components/DeltOversikt'
 import { advanceReview, applyWeekTemplate, createWeekTemplate, deferReview, findLectureConflictIds, makeReview } from './lib/plannerFeatures'
 
 const TABS = [
@@ -76,7 +78,9 @@ export default function App() {
   const [focusTarget, setFocusTarget] = useState(null)
   const [sharedToken] = useState(() => new URLSearchParams(window.location.search).get('del'))
   const [planToken] = useState(() => new URLSearchParams(window.location.search).get('plan'))
+  const [semesterToken] = useState(() => new URLSearchParams(window.location.search).get('semester'))
   const [sharePlan, setSharePlan] = useState(null)
+  const [shareSemester, setShareSemester] = useState(false)
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('planner-theme')
     if (saved) return saved
@@ -109,6 +113,7 @@ export default function App() {
     return <DeltFag token={sharedToken} />
   }
   if (planToken) return <DeltArbeidsplan token={planToken} />
+  if (semesterToken) return <DeltOversikt token={semesterToken} />
 
   if (authStatus === 'loading') {
     return (
@@ -646,6 +651,11 @@ export default function App() {
       <main className="mx-auto max-w-5xl px-4 pb-20">
         {tab === 'overview' && (
           <div key="overview">
+            {Boolean(hasSupabase && user && user.id !== 'local') && (
+              <div className="mb-4 flex justify-end">
+                <button onClick={() => setShareSemester(true)} className="btn-ghost">Del hele oversikten</button>
+              </div>
+            )}
             <UpcomingAgenda
               lectures={data.lectures}
               readings={data.readings}
@@ -843,6 +853,7 @@ export default function App() {
         <ShareModal subject={shareSubject} userId={user.id} onClose={() => setShareSubject(null)} />
       )}
       {sharePlan && <SharePlanModal plan={sharePlan} onClose={() => setSharePlan(null)} />}
+      {shareSemester && <ShareSemesterModal onClose={() => setShareSemester(false)} />}
 
       {focusTarget !== null && <FocusMode items={focusItems} initialTarget={focusTarget?.key} onClose={() => setFocusTarget(null)} onComplete={finishFocusItem} />}
 
