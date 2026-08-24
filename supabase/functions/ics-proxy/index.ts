@@ -40,7 +40,7 @@ function corsHeaders(origin: string | null) {
   return {
     'Access-Control-Allow-Origin': origin ?? '*',
     'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    'Access-Control-Allow-Headers': 'authorization, apikey, content-type',
+    'Access-Control-Allow-Headers': 'authorization, apikey, content-type, x-client-info',
     Vary: 'Origin',
   }
 }
