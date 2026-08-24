@@ -2,7 +2,7 @@ const RELEASES = [
   {
     version: 'v1.2.6', date: '2026-08-24', dateLabel: '24. august 2026', title: 'Del hele semesteret med én lenke', summary: 'Ny delingslenke som gir en skrivebeskyttet oversikt over alle fagene dine - timeplan, pensum, arbeidskrav og eksamener.', groups: [
       { title: 'Deling', items: ['Ny knapp «Del hele oversikten» på Oversikt-fanen lager en skrivebeskyttet lenke til alle fagene dine.', 'Mottakeren ser timeplan, pensum, arbeidskrav og eksamener per fag, med fullføringsstatus.', 'Lenken viser alltid gjeldende plan, utløper etter 30 dager og kan tilbakekalles når som helst.'] },
-      { title: 'Sikkerhet', items: ['Notater til AI, øvingssvar og arbeidsplaner deles aldri - svaret bygges server-side fra en eksplisitt tillat-liste.', 'Lenkene bruker lange tilfeldige tokens, det er kun én aktiv lenke per bruker, og antall nye lenker er begrenset.'] },
+      { title: 'Sikkerhet', items: ['Ulike sikkerhetsoppdateringer i bakgrunnen.'] },
     ],
   },
   {
