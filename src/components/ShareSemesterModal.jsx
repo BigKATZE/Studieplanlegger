@@ -5,11 +5,9 @@ import { Modal } from './Modals'
 async function functionErrorMessage(error, fallback) {
   try {
     const body = await error?.context?.json()
-    if (body?.error || body?.message || body?.msg) return body.error || body.message || body.msg
-    if (body) return `${fallback} (${JSON.stringify(body).slice(0, 300)})`
-    return `${fallback} [${error?.name || 'ukjent'}: ${error?.message || ''}]`.trim()
+    return body?.error || body?.message || body?.msg || fallback
   } catch {
-    return `${fallback} [${error?.name || 'ukjent'}: ${error?.message || ''}]`.trim()
+    return fallback
   }
 }
 

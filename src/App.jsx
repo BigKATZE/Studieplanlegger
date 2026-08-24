@@ -27,6 +27,7 @@ import SharePlanModal from './components/SharePlanModal'
 import DeltArbeidsplan from './components/DeltArbeidsplan'
 import ShareSemesterModal from './components/ShareSemesterModal'
 import DeltOversikt from './components/DeltOversikt'
+import DelteLenker from './components/DelteLenker'
 import { advanceReview, applyWeekTemplate, createWeekTemplate, deferReview, findLectureConflictIds, makeReview } from './lib/plannerFeatures'
 
 const TABS = [
@@ -81,6 +82,7 @@ export default function App() {
   const [semesterToken] = useState(() => new URLSearchParams(window.location.search).get('semester'))
   const [sharePlan, setSharePlan] = useState(null)
   const [shareSemester, setShareSemester] = useState(false)
+  const [showSharedLinks, setShowSharedLinks] = useState(false)
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('planner-theme')
     if (saved) return saved
@@ -652,8 +654,16 @@ export default function App() {
         {tab === 'overview' && (
           <div key="overview">
             {Boolean(hasSupabase && user && user.id !== 'local') && (
-              <div className="mb-4 flex justify-end">
+              <div className="mb-4 flex flex-wrap justify-end gap-2">
+                <button onClick={() => setShowSharedLinks((v) => !v)} className="btn-ghost">
+                  {showSharedLinks ? 'Skjul delte lenker' : 'Delte lenker'}
+                </button>
                 <button onClick={() => setShareSemester(true)} className="btn-ghost">Del hele oversikten</button>
+              </div>
+            )}
+            {showSharedLinks && (
+              <div className="mb-6">
+                <DelteLenker subjects={data.subjects} onClose={() => setShowSharedLinks(false)} />
               </div>
             )}
             <UpcomingAgenda

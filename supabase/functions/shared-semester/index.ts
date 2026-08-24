@@ -81,9 +81,13 @@ Deno.serve(async (request) => {
     return overview ? json(overview) : json({ error: 'Fant ingen fag å vise.' }, 404)
   }
 
-  if (!['create', 'revoke'].includes(String(body.action))) return json({ error: 'Ugyldig forespørsel.' }, 400)
-  const allowedKeys = body.action === 'create' ? ['action'] : ['action', 'token']
-  if (Object.keys(body).some((key) => !allowedKeys.includes(key))) return json({ error: 'Ugyldig forespørsel.' }, 400)
+  if (!['create', 'revoke', 'list'].includes(String(body.action))) return json({ error: 'Ugyldig forespørsel.' }, 400)
+  if (body.action === 'list') {
+    if (Object.keys(body).some((key) => key !== 'action')) return json({ error: 'Ugyldig forespørsel.' }, 400)
+  } else {
+    const allowedKeys = body.action === 'create' ? ['action'] : ['action', 'token']
+    if (Object.keys(body).some((key) => !allowedKeys.includes(key))) return json({ error: 'Ugyldig forespørsel.' }, 400)
+  }
 
   const authorization = request.headers.get('authorization')
   if (!authorization) return json({ error: 'Du må være logget inn.' }, 401)
@@ -93,6 +97,18 @@ Deno.serve(async (request) => {
   const { data: authData, error: authError } = await authClient.auth.getUser()
   if (authError || !authData.user) return json({ error: 'Du må være logget inn.' }, 401)
   const userId = authData.user.id
+
+  if (body.action === 'list') {
+    const { data: links, error: listError } = await service
+      .from('shared_semester_links')
+      .select('token, expires_at, created_at')
+      .eq('user_id', userId)
+      .is('revoked_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+    if (listError) return json({ error: 'Kunne ikke hente lenker.' }, 500)
+    return json({ links: links ?? [] })
+  }
 
   if (body.action === 'create') {
     const { data: existing } = await service

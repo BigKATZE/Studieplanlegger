@@ -82,9 +82,13 @@ Deno.serve(async (request) => {
     return plan ? json({ plan }) : json({ error: 'Planen finnes ikke.' }, 404)
   }
 
-  if (!['create', 'revoke'].includes(String(body.action))) return json({ error: 'Ugyldig forespørsel.' }, 400)
-  const allowedKeys = body.action === 'create' ? ['action', 'planId'] : ['action', 'token']
-  if (Object.keys(body).some((key) => !allowedKeys.includes(key))) return json({ error: 'Ugyldig forespørsel.' }, 400)
+  if (!['create', 'revoke', 'list'].includes(String(body.action))) return json({ error: 'Ugyldig forespørsel.' }, 400)
+  if (body.action === 'list') {
+    if (Object.keys(body).some((key) => key !== 'action')) return json({ error: 'Ugyldig forespørsel.' }, 400)
+  } else {
+    const allowedKeys = body.action === 'create' ? ['action', 'planId'] : ['action', 'token']
+    if (Object.keys(body).some((key) => !allowedKeys.includes(key))) return json({ error: 'Ugyldig forespørsel.' }, 400)
+  }
 
   const authorization = request.headers.get('authorization')
   if (!authorization) return json({ error: 'Du må være logget inn.' }, 401)
@@ -94,6 +98,25 @@ Deno.serve(async (request) => {
   const { data: authData, error: authError } = await authClient.auth.getUser()
   if (authError || !authData.user) return json({ error: 'Du må være logget inn.' }, 401)
   const userId = authData.user.id
+
+  if (body.action === 'list') {
+    const { data: links, error: listError } = await service
+      .from('shared_plan_links')
+      .select('token, plan_id, expires_at, created_at')
+      .eq('user_id', userId)
+      .is('revoked_at', null)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+    if (listError) return json({ error: 'Kunne ikke hente lenker.' }, 500)
+    // Berik med tittel fra user_data
+    const { data: row } = await service.from('user_data').select('data').eq('user_id', userId).maybeSingle()
+    const plans = row?.data?.workPlans ?? []
+    const enriched = (links ?? []).map((link) => {
+      const plan = plans.find((p) => p?.id === link.plan_id)
+      return { token: link.token, planId: link.plan_id, title: plan?.title ?? 'Arbeidsplan', expiresAt: link.expires_at, createdAt: link.created_at }
+    })
+    return json({ links: enriched })
+  }
 
   if (body.action === 'create') {
     if (typeof body.planId !== 'string' || !UUID_PATTERN.test(body.planId)) return json({ error: 'Ugyldig plan.' }, 400)
