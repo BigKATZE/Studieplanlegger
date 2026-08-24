@@ -1,6 +1,12 @@
 const RELEASES = [
   {
-    version: 'v3.0', date: '2026-08-23', dateLabel: '23. august 2026', title: 'Raskere markering og roligere toppbar', summary: 'Timeplan får uke-markering, navigasjonen er tilbake til stille linje uten animasjon, og toppbaren får helhetlige bokser i lys og mørk modus.', groups: [
+    version: 'v1.2.6', date: '2026-08-24', dateLabel: '24. august 2026', title: 'Del hele semesteret med én lenke', summary: 'Ny delingslenke som gir en skrivebeskyttet oversikt over alle fagene dine - timeplan, pensum, arbeidskrav og eksamener.', groups: [
+      { title: 'Deling', items: ['Ny knapp «Del hele oversikten» på Oversikt-fanen lager en skrivebeskyttet lenke til alle fagene dine.', 'Mottakeren ser timeplan, pensum, arbeidskrav og eksamener per fag, med fullføringsstatus.', 'Lenken viser alltid gjeldende plan, utløper etter 30 dager og kan tilbakekalles når som helst.'] },
+      { title: 'Sikkerhet', items: ['Notater til AI, øvingssvar og arbeidsplaner deles aldri - svaret bygges server-side fra en eksplisitt tillat-liste.', 'Lenkene bruker lange tilfeldige tokens, det er kun én aktiv lenke per bruker, og antall nye lenker er begrenset.'] },
+    ],
+  },
+  {
+    version: 'v1.2.5', date: '2026-08-23', dateLabel: '23. august 2026', title: 'Raskere markering og roligere toppbar', summary: 'Timeplan får uke-markering, navigasjonen er tilbake til stille linje uten animasjon, og toppbaren får helhetlige bokser i lys og mørk modus.', groups: [
       { title: 'Timeplan', items: ['Ny knapp per uke: «Marker alle» / «Fjern alle» for deltakelse — setter alle forelesninger i uken som deltatt på én gang.', '«Deltatt»-knappen er tom når ikke deltatt og viser hake + «Deltatt» først når den er aktiv.'] },
       { title: 'Navigasjon', items: ['Hovedfanene er tilbake til underline (stille struktur) — ingen ytre pill-container.', 'Fjernet scale-animasjon på aktiv strek og slide-animasjon ved fanebytte — bytte er nå instant.'] },
       { title: 'Toppbar', items: ['«Lagret lokalt/Synkronisert» har fått samme boks som GitHub/søk (h-9 rounded-xl, border/shadow) — egen stil ved synkfeil.', '«Changelog», «Logg inn», «Endre passord» og «Logg ut» har fått helhetlige bokser i lys og mørk modus.', 'Sol-toggle i lys modus har ikke lenger svart sirkel — hvit pill med amber sol, mørk beholder grønn pill.', 'Strek under «Studieplanlegger» er nå #141414 (samme som bakgrunnen i mørk modus).', 'Primærfarge i lys modus er myknet: #141414 → #1e1e1e.'] },
@@ -118,7 +124,7 @@ export default function Changelog() {
           <article key={release.version} className="grid gap-6 border-t border-line pt-7 md:grid-cols-[9rem_minmax(0,1fr)] md:gap-10">
             <div>
               <h3 className="font-display text-2xl font-bold tracking-[-.02em] text-ink">{release.version}</h3>
-              <p className="mt-1 text-xs font-semibold text-secondary">
+              <p className={`mt-1 text-xs font-semibold ${releaseIndex === 0 ? 'text-secondary' : 'text-muted'}`}>
                 {releaseIndex === 0 ? 'Nyeste versjon' : 'Tidligere versjon'}
               </p>
               <time dateTime={release.date} className="mt-3 block text-sm text-muted">
