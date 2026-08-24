@@ -207,9 +207,12 @@ export default function DeltOversikt({ token }) {
                                 <button
                                   type="button"
                                   onClick={() => setExpandedLectures((prev) => { const n = new Set(prev); n.has(subject.id) ? n.delete(subject.id) : n.add(subject.id); return n })}
-                                  className="text-xs font-medium text-secondary hover:underline"
+                                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 text-xs font-medium text-muted shadow-sm transition-all hover:border-ink/15 hover:bg-paper hover:text-ink hover:shadow active:scale-[0.98]"
                                 >
-                                  {expandedLectures.has(subject.id) ? 'Vis færre' : `Vis alle (${subject.lectures.length})`}
+                                  {expandedLectures.has(subject.id) ? 'Vis færre' : `Vis alle · ${subject.lectures.length}`}
+                                  <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true" className={`h-3 w-3 transition-transform duration-200 ${expandedLectures.has(subject.id) ? 'rotate-180' : ''}`}>
+                                    <path d="M3 4.5 6 7.5 9 4.5" />
+                                  </svg>
                                 </button>
                               )}
                             </div>
