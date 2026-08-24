@@ -5,7 +5,7 @@ import { Modal } from './Modals'
 async function functionErrorMessage(error, fallback) {
   try {
     const body = await error?.context?.json()
-    return body?.error || fallback
+    return body?.error || body?.message || body?.msg || fallback
   } catch {
     return fallback
   }
