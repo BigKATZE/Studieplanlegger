@@ -210,6 +210,8 @@ test('normaliserer eldre data, legger til repetisjon og åpner fokus med konflik
 })
 
 test('app loads, pensum tab og fagfilter fungerer', async ({ page }) => {
+  const now = new Date()
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
   await page.route('**/rest/v1/user_data*', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',
@@ -240,7 +242,7 @@ test('app loads, pensum tab og fagfilter fungerer', async ({ page }) => {
     session,
     data: {
       subjects: [{ id: 's1', code: 'JUR3420', name: 'Forretningsjus', short: 'Forretningsjus', color: '#7c3aed', levelOverride: null }],
-      lectures: [],
+      lectures: [{ id: 'today-lecture', subjectId: 's1', date: today, start: '08:00', end: '09:00', topic: 'Dagens testforelesning', chapters: [], done: false }],
       assignments: [{ id: 'a1', subjectId: 's1', title: 'Arbeidskrav 1 – Obligasjonsrett', deadline: '2026-10-01', status: 'not_started' }],
       exams: [],
       readings: [],
@@ -280,13 +282,75 @@ test('app loads, pensum tab og fagfilter fungerer', async ({ page }) => {
   await page.getByRole('button', { name: 'Oversikt', exact: true }).click()
   await expect(page.getByText('Forelesninger').first()).toBeVisible()
   await page.getByRole('button', { name: 'Neste 7 dager' }).click()
-  await expect(page.getByText('Forelesning TEST1234 – Introduksjon og studieteknikk')).toBeVisible()
+  await expect(page.getByText('Dagens testforelesning')).toBeVisible()
 
   await page.getByRole('button', { name: 'Slett alt' }).click()
   await page.getByRole('button', { name: 'Ja, fortsett' }).click()
   await expect(page.getByRole('heading', { name: 'Bekreft permanent sletting' })).toBeVisible()
   await page.getByRole('button', { name: 'Ja, slett alt' }).click()
   await expect(page.getByText('Ingen fag ennå. Legg til et fag eller importer en timeplan.')).toBeVisible()
+})
+
+test('skjuler fullførte elementer på tvers av faner og husker valget', async ({ page }) => {
+  await page.addInitScript(() => {
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const tomorrowDate = new Date(now)
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1)
+    const tomorrow = `${tomorrowDate.getFullYear()}-${String(tomorrowDate.getMonth() + 1).padStart(2, '0')}-${String(tomorrowDate.getDate()).padStart(2, '0')}`
+    const yesterdayDate = new Date(now)
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1)
+    const yesterday = `${yesterdayDate.getFullYear()}-${String(yesterdayDate.getMonth() + 1).padStart(2, '0')}-${String(yesterdayDate.getDate()).padStart(2, '0')}`
+    localStorage.setItem('oliarev-study-planner-v2', JSON.stringify({
+      subjects: [{ id: 's1', name: 'Filterfag', short: 'Filterfag', color: '#7c3aed' }],
+      lectures: [
+        { id: 'l1', subjectId: 's1', date: today, start: '09:00', end: '10:00', topic: 'Fullført forelesning', chapters: [], done: true },
+        { id: 'l2', subjectId: 's1', date: today, start: '11:00', end: '12:00', topic: 'Åpen forelesning', chapters: [{ id: 'c1', text: 'Lest kapittel', done: true }, { id: 'c2', text: 'Ulest kapittel', done: false }], done: false },
+      ],
+      readings: [
+        { id: 'r1', subjectId: 's1', title: 'Fullført pensum', week: null, chapters: [], done: true },
+        { id: 'r2', subjectId: 's1', title: 'Åpent pensum', week: null, chapters: [], done: false },
+      ],
+      assignments: [
+        { id: 'a1', subjectId: 's1', title: 'Fullført arbeidskrav', deadline: tomorrow, status: 'done' },
+        { id: 'a2', subjectId: 's1', title: 'Åpent arbeidskrav', deadline: tomorrow, status: 'not_started' },
+      ],
+      exams: [
+        { id: 'e1', subjectId: 's1', title: 'Gjennomført eksamen', date: yesterday, time: '09:00' },
+        { id: 'e2', subjectId: 's1', title: 'Kommende eksamen', date: tomorrow, time: '09:00' },
+      ],
+      workPlans: [{ id: 'p1', subjectId: 's1', title: 'Arbeidsplan', steps: [{ id: 'p1s1', title: 'Fullført steg', completed: true }, { id: 'p1s2', title: 'Åpent steg', completed: false }] }],
+      reviews: [], weekTemplates: [], aiSources: [], quizAttempts: [],
+    }))
+  })
+
+  await page.goto('/')
+  const timeplanControls = page.getByRole('heading', { name: 'Uke for uke' }).locator('..')
+  await expect(timeplanControls.getByRole('button', { name: 'Filtrer på uke' })).toBeVisible()
+  await timeplanControls.getByRole('button', { name: /Skjul 2 fullførte elementer/ }).click()
+  await expect(page.getByText('Fullført forelesning')).toHaveCount(0)
+  await expect(page.getByText('Lest kapittel', { exact: true })).toHaveCount(0)
+  await expect(page.getByText('Åpen forelesning')).toBeVisible()
+  await expect(page.getByText('Ulest kapittel')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Pensum', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Pensum til forelesning' }).locator('..').getByRole('button', { name: /Vis 1 fullførte elementer/ })).toBeVisible()
+  await expect(page.getByText('Fullført pensum')).toHaveCount(0)
+  await expect(page.getByText('Åpent pensum')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Arbeidskrav', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Arbeidskrav' }).locator('..').getByRole('button', { name: /Vis 2 fullførte elementer/ })).toBeVisible()
+  await expect(page.getByText('Fullført arbeidskrav')).toHaveCount(0)
+  await expect(page.getByText('Åpent arbeidskrav')).toBeVisible()
+  await expect(page.getByText('Fullført steg')).toHaveCount(0)
+  await expect(page.getByText('Åpent steg')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Eksamener', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Eksamensdatoer' }).locator('..').getByRole('button', { name: /Vis 1 fullførte elementer/ })).toBeVisible()
+  await expect(page.getByText('Gjennomført eksamen')).toHaveCount(0)
+  await expect(page.getByText('Kommende eksamen')).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('button', { name: /Vis 2 fullførte elementer/ })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('forslag til ny dato må godkjennes før arbeidskravet flyttes', async ({ page }) => {

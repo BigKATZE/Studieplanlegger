@@ -207,6 +207,26 @@ export function WeekFilter({ weeks, active, onChange }) {
   )
 }
 
+export function CompletedFilterButton({ active, count, onChange }) {
+  const action = active ? 'Vis' : 'Skjul'
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      aria-pressed={active}
+      aria-label={`${action} ${count} fullførte elementer`}
+      disabled={!active && count === 0}
+      className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-[12px] border px-3.5 py-2.5 text-sm font-medium shadow-sm transition-all duration-200 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-secondary/15 disabled:cursor-not-allowed disabled:opacity-45 ${active ? 'border-secondary/40 bg-secondary/10 text-ink' : 'border-line bg-surface text-muted hover:border-muted hover:bg-surface hover:text-ink hover:shadow-md'}`}
+    >
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-4 w-4 shrink-0">
+        {active ? <><path d="M3 3l14 14" /><path d="M8.4 5.3A8.7 8.7 0 0 1 10 5.1c4.5 0 7.2 4.9 7.2 4.9a12.7 12.7 0 0 1-2.2 2.8M11.6 14.7a8.7 8.7 0 0 1-1.6.2C5.5 14.9 2.8 10 2.8 10a12.7 12.7 0 0 1 2.2-2.8" /></> : <><path d="M2.8 10S5.5 5.1 10 5.1s7.2 4.9 7.2 4.9-2.7 4.9-7.2 4.9S2.8 10 2.8 10Z" /><circle cx="10" cy="10" r="2.2" /></>}
+      </svg>
+      <span className="whitespace-nowrap">{action} fullførte</span>
+      {count > 0 && <span className="font-mono text-xs opacity-70">{count}</span>}
+    </button>
+  )
+}
+
 export function SubjectFilter({ subjects, active, onChange }) {
   return (
     <div className="mt-6 flex flex-wrap items-center gap-2">

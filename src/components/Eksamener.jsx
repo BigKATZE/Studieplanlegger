@@ -1,15 +1,18 @@
 import { useMemo, useState } from 'react'
-import { SubjectChip, DeadlineBadge, WeekFilter } from './ui'
+import { CompletedFilterButton, SubjectChip, DeadlineBadge, WeekFilter } from './ui'
 import { iso, isoWeek, weekRangeByWeek, fmtShort, DEFAULT_WEEKS } from '../lib/date'
 import { examSubjectProgress } from '../lib/plannerFeatures'
 
-export default function Eksamener({ exams, subjects, data, onRemoveExam, onEditExam }) {
+export default function Eksamener({ exams, subjects, data, onRemoveExam, onEditExam, hideCompleted = false, onToggleHideCompleted }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
   const [week, setWeek] = useState(null)
+  const today = iso(new Date())
+  const completedCount = useMemo(() => exams.filter((exam) => exam.date && exam.date < today).length, [exams, today])
+  const visibleExams = useMemo(() => hideCompleted ? exams.filter((exam) => !exam.date || exam.date >= today) : exams, [exams, hideCompleted, today])
 
   const groups = useMemo(() => {
     const m = new Map()
-    exams.forEach((e) => {
+    visibleExams.forEach((e) => {
       const w = isoWeek(new Date(e.date))
       if (!m.has(w)) m.set(w, { week: w, date: new Date(e.date), exams: [] })
       m.get(w).exams.push(e)
@@ -17,7 +20,7 @@ export default function Eksamener({ exams, subjects, data, onRemoveExam, onEditE
     const arr = [...m.values()].sort((a, b) => a.date - b.date)
     arr.forEach((g) => g.exams.sort((a, b) => a.date.localeCompare(b.date)))
     return arr
-  }, [exams])
+  }, [visibleExams])
 
   const groupsByWeek = useMemo(() => new Map(groups.map((g) => [g.week, g])), [groups])
   const weeks = useMemo(() => groups.map((g) => g.week), [groups])
@@ -27,11 +30,14 @@ export default function Eksamener({ exams, subjects, data, onRemoveExam, onEditE
     <section className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Eksamensdatoer</h2>
-        <WeekFilter weeks={weeks} active={week} onChange={setWeek} />
+        <div className="flex items-center justify-end gap-2">
+          <CompletedFilterButton active={hideCompleted} count={completedCount} onChange={onToggleHideCompleted} />
+          <WeekFilter weeks={weeks} active={week} onChange={setWeek} />
+        </div>
       </div>
-      {exams.length === 0 && (
+      {visibleExams.length === 0 && (
         <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
-          Ingen eksamener registrert. Legg til en eksamen eller skriv f.eks. «eksamen i bedøk 1. november» i feltet øverst.
+          {hideCompleted && exams.length > 0 ? 'Alle gjennomførte eksamener er skjult.' : 'Ingen eksamener registrert. Legg til en eksamen eller skriv f.eks. «eksamen i bedøk 1. november» i feltet øverst.'}
         </p>
       )}
       <div className="mt-3 space-y-6">
@@ -45,7 +51,6 @@ export default function Eksamener({ exams, subjects, data, onRemoveExam, onEditE
               </div>
               <div className="mt-2 space-y-2">
                 {g?.exams.map((e) => {
-                const today = iso(new Date())
                 const days = Math.round((new Date(`${e.date}T00:00:00`) - new Date(`${today}T00:00:00`)) / 86400000)
                 const past = days < 0
                 const progress = examSubjectProgress(e, data)

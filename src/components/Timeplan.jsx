@@ -1,19 +1,21 @@
 import { useMemo, useState } from 'react'
 import { isoWeek, weekRangeByWeek, weekdayShort, fmtShort, DEFAULT_WEEKS } from '../lib/date'
-import { SubjectChip, WeekFilter } from './ui'
+import { CompletedFilterButton, SubjectChip, WeekFilter } from './ui'
 import { findLectureConflictIds } from '../lib/plannerFeatures'
 import WeekTemplates from './WeekTemplates'
 
-export default function Timeplan({ lectures, subjects, week, onWeekChange, onToggleLecture, onSetLectureAttendance, onToggleChapter, onUpdateChapter, onRemoveChapter, onRemoveLecture, onEditLecture, weekTemplates = [], onSaveTemplate, onApplyTemplate, onRemoveTemplate, conflictIds: suppliedConflictIds }) {
+export default function Timeplan({ lectures, subjects, week, onWeekChange, onToggleLecture, onSetLectureAttendance, onToggleChapter, onUpdateChapter, onRemoveChapter, onRemoveLecture, onEditLecture, weekTemplates = [], onSaveTemplate, onApplyTemplate, onRemoveTemplate, conflictIds: suppliedConflictIds, hideCompleted = false, onToggleHideCompleted }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
   const [editingChapter, setEditingChapter] = useState(null)
   const [chapterText, setChapterText] = useState('')
-  const detectedConflictIds = useMemo(() => findLectureConflictIds(lectures), [lectures])
+  const completedCount = useMemo(() => lectures.reduce((total, lecture) => total + (lecture.done ? 1 : lecture.chapters.filter((chapter) => chapter.done).length), 0), [lectures])
+  const visibleLectures = useMemo(() => hideCompleted ? lectures.filter((lecture) => !lecture.done) : lectures, [hideCompleted, lectures])
+  const detectedConflictIds = useMemo(() => findLectureConflictIds(visibleLectures), [visibleLectures])
   const conflictIds = suppliedConflictIds ?? detectedConflictIds
 
   const groups = useMemo(() => {
     const m = new Map()
-    lectures.forEach((l) => {
+    visibleLectures.forEach((l) => {
       const w = isoWeek(new Date(l.date))
       if (!m.has(w)) m.set(w, { week: w, date: new Date(l.date), lectures: [] })
       m.get(w).lectures.push(l)
@@ -21,7 +23,7 @@ export default function Timeplan({ lectures, subjects, week, onWeekChange, onTog
     const arr = [...m.values()].sort((a, b) => a.date - b.date)
     arr.forEach((g) => g.lectures.sort((a, b) => a.date.localeCompare(b.date) || a.start.localeCompare(b.start)))
     return arr
-  }, [lectures])
+  }, [visibleLectures])
 
   const groupsByWeek = useMemo(() => new Map(groups.map((g) => [g.week, g])), [groups])
   const weeks = DEFAULT_WEEKS
@@ -31,12 +33,15 @@ export default function Timeplan({ lectures, subjects, week, onWeekChange, onTog
     <section className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Uke for uke</h2>
-        <WeekFilter weeks={weeks} active={week} onChange={onWeekChange} />
+        <div className="flex items-center justify-end gap-2">
+          <CompletedFilterButton active={hideCompleted} count={completedCount} onChange={onToggleHideCompleted} />
+          <WeekFilter weeks={weeks} active={week} onChange={onWeekChange} />
+        </div>
       </div>
       <WeekTemplates week={week} templates={weekTemplates} onSave={onSaveTemplate} onApply={onApplyTemplate} onRemove={onRemoveTemplate} />
-      {lectures.length === 0 && (
+      {visibleLectures.length === 0 && (
         <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
-          Ingen forelesninger ennå. Importer en timeplan eller legg til manuelt.
+          {hideCompleted && lectures.length > 0 ? 'Alle fullførte forelesninger er skjult.' : 'Ingen forelesninger ennå. Importer en timeplan eller legg til manuelt.'}
         </p>
       )}
       <div className="mt-3 space-y-6">
@@ -67,6 +72,7 @@ export default function Timeplan({ lectures, subjects, week, onWeekChange, onTog
                 {g?.lectures.map((l) => {
                 const date = new Date(l.date)
                 const subject = subjectById[l.subjectId]
+                const chapters = hideCompleted ? l.chapters.filter((chapter) => !chapter.done) : l.chapters
                 return (
                   <div key={l.id} className="rounded-lg border border-line bg-surface p-4">
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
@@ -110,13 +116,13 @@ export default function Timeplan({ lectures, subjects, week, onWeekChange, onTog
                     </div>
                     {l.topic && <p className="mt-1 pl-6 text-sm text-muted">{l.topic}</p>}
                     {conflictIds.has(l.id) && <p role="alert" className="mt-2 pl-6 text-sm text-warning">Tidskonflikt med en annen forelesning denne dagen.</p>}
-                    {l.chapters.length > 0 && (
+                    {chapters.length > 0 && (
                       <div className="mt-2 pl-6">
                         <p className="mb-1 text-xs font-medium text-muted">
-                          {l.chapters.length === 1 ? 'Kapittel' : 'Kapitler'}
+                          {chapters.length === 1 ? 'Kapittel' : 'Kapitler'}
                         </p>
                         <ul className="space-y-1">
-                        {l.chapters.map((c) => (
+                        {chapters.map((c) => (
                           <li key={c.id} className="flex items-center gap-2">
                             <input
                               type="checkbox"

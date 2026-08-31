@@ -83,6 +83,7 @@ export default function App() {
   const [sharePlan, setSharePlan] = useState(null)
   const [shareSemester, setShareSemester] = useState(false)
   const [showSharedLinks, setShowSharedLinks] = useState(false)
+  const [hideCompleted, setHideCompleted] = useState(() => localStorage.getItem('planner-hide-completed') === 'true')
   const [theme, setTheme] = useState(() => {
     const saved = localStorage.getItem('planner-theme')
     if (saved) return saved
@@ -93,6 +94,10 @@ export default function App() {
     document.documentElement.classList.toggle('dark', theme === 'dark')
     localStorage.setItem('planner-theme', theme)
   }, [theme])
+
+  useEffect(() => {
+    localStorage.setItem('planner-hide-completed', String(hideCompleted))
+  }, [hideCompleted])
 
   useEffect(() => {
     if (!undo) return
@@ -667,7 +672,7 @@ export default function App() {
               </div>
             )}
             <UpcomingAgenda
-              lectures={data.lectures}
+              lectures={hideCompleted ? data.lectures.filter((item) => !item.done) : data.lectures}
               readings={data.readings}
               assignments={data.assignments}
               exams={data.exams}
@@ -719,6 +724,8 @@ export default function App() {
                 onApplyTemplate={applyTemplate}
                 onRemoveTemplate={(id) => update((d) => ({ ...d, weekTemplates: d.weekTemplates.filter((template) => template.id !== id) }))}
                 conflictIds={conflictIds}
+                hideCompleted={hideCompleted}
+                onToggleHideCompleted={() => setHideCompleted((value) => !value)}
               />
             </div>
           </div>
@@ -735,6 +742,8 @@ export default function App() {
                 onToggleReadingChapter={actions.toggleReadingChapter}
                 onRemoveReading={actions.removeReading}
                 onEditReading={(r) => openEdit('reading', r)}
+                hideCompleted={hideCompleted}
+                onToggleHideCompleted={() => setHideCompleted((value) => !value)}
               />
             </div>
           </div>
@@ -750,8 +759,11 @@ export default function App() {
                 onSetAssignmentStatus={actions.setAssignmentStatus}
                 onRemoveAssignment={actions.removeAssignment}
                 onEditAssignment={(a) => openEdit('assignment', a)}
+                hideCompleted={hideCompleted}
+                onToggleHideCompleted={() => setHideCompleted((value) => !value)}
+                completedCount={bySubject(data.assignments).filter((assignment) => assignment.status === 'done').length + data.workPlans.reduce((total, plan) => total + plan.steps.filter((step) => step.completed).length, 0)}
               />
-              <WorkPlans plans={data.workPlans} subjects={data.subjects} onToggle={actions.toggleWorkPlanStep} onRemove={actions.removeWorkPlan} onShare={setSharePlan} canShare={Boolean(hasSupabase && user && user.id !== 'local')} />
+              <WorkPlans plans={data.workPlans} subjects={data.subjects} onToggle={actions.toggleWorkPlanStep} onRemove={actions.removeWorkPlan} onShare={setSharePlan} canShare={Boolean(hasSupabase && user && user.id !== 'local')} hideCompleted={hideCompleted} />
             </div>
           </div>
         )}
@@ -766,6 +778,8 @@ export default function App() {
                 data={data}
                 onRemoveExam={actions.removeExam}
                 onEditExam={(e) => openEdit('exam', e)}
+                hideCompleted={hideCompleted}
+                onToggleHideCompleted={() => setHideCompleted((value) => !value)}
               />
             </div>
           </div>

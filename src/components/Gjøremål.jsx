@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { SubjectChip, DeadlineBadge, Select, WeekFilter } from './ui'
+import { CompletedFilterButton, SubjectChip, DeadlineBadge, Select, WeekFilter } from './ui'
 import { isoWeek, weekRangeByWeek, DEFAULT_WEEKS } from '../lib/date'
 
 const STATUS_LABEL = { not_started: 'Ikke startet', in_progress: 'I arbeid', done: 'Ferdig' }
@@ -9,13 +9,14 @@ const SECTIONS = [
   ['done', 'Ferdig'],
 ]
 
-export default function Gjøremål({ assignments, subjects, onSetAssignmentStatus, onRemoveAssignment, onEditAssignment }) {
+export default function Gjøremål({ assignments, subjects, onSetAssignmentStatus, onRemoveAssignment, onEditAssignment, hideCompleted = false, onToggleHideCompleted, completedCount = 0 }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
   const [week, setWeek] = useState(null)
+  const visibleAssignments = useMemo(() => hideCompleted ? assignments.filter((assignment) => assignment.status !== 'done') : assignments, [assignments, hideCompleted])
 
   const groups = useMemo(() => {
     const m = new Map()
-    assignments.forEach((a) => {
+    visibleAssignments.forEach((a) => {
       const w = isoWeek(new Date(a.deadline))
       if (!m.has(w)) m.set(w, { week: w, date: new Date(a.deadline), byStatus: { not_started: [], in_progress: [], done: [] } })
       m.get(w).byStatus[a.status] ??= []
@@ -24,7 +25,7 @@ export default function Gjøremål({ assignments, subjects, onSetAssignmentStatu
     const arr = [...m.values()].sort((a, b) => a.date - b.date)
     arr.forEach((g) => Object.values(g.byStatus).forEach((list) => list.sort((x, y) => x.deadline.localeCompare(y.deadline))))
     return arr
-  }, [assignments])
+  }, [visibleAssignments])
 
   const groupsByWeek = useMemo(() => new Map(groups.map((g) => [g.week, g])), [groups])
   const weeks = useMemo(() => groups.map((g) => g.week), [groups])
@@ -35,11 +36,14 @@ export default function Gjøremål({ assignments, subjects, onSetAssignmentStatu
     <section className="mt-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-display text-sm font-semibold uppercase tracking-wider text-muted">Arbeidskrav</h2>
-        <WeekFilter weeks={weeks} active={week} onChange={setWeek} />
+        <div className="flex items-center justify-end gap-2">
+          <CompletedFilterButton active={hideCompleted} count={completedCount} onChange={onToggleHideCompleted} />
+          <WeekFilter weeks={weeks} active={week} onChange={setWeek} />
+        </div>
       </div>
-      {assignments.length === 0 && (
+      {visibleAssignments.length === 0 && (
         <p className="mt-4 rounded-lg border border-dashed border-line bg-surface p-6 text-sm text-muted">
-          Ingen arbeidskrav ennå. Legg til et arbeidskrav.
+          {hideCompleted && assignments.length > 0 ? 'Alle fullførte arbeidskrav er skjult.' : 'Ingen arbeidskrav ennå. Legg til et arbeidskrav.'}
         </p>
       )}
       <div className="mt-3 space-y-6">
@@ -53,7 +57,7 @@ export default function Gjøremål({ assignments, subjects, onSetAssignmentStatu
                 <span className="text-xs text-muted">{weekRangeByWeek(w)}</span>
               </div>
               <div className="mt-2 space-y-4">
-                {SECTIONS.map(([status, label]) => (
+                {SECTIONS.filter(([status]) => !hideCompleted || status !== 'done').map(([status, label]) => (
                   <div key={status}>
                     <h4 className="text-sm font-semibold text-muted">
                       {label} <span className="font-mono text-xs">({byStatus[status].length})</span>
