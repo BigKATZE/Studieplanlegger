@@ -3,6 +3,26 @@ import { CompletedFilterButton, SubjectChip, WeekFilter } from './ui'
 import { weekRangeByWeek, DEFAULT_WEEKS } from '../lib/date'
 import { readingComplete } from '../lib/plannerFeatures'
 
+function ReadingChapters({ reading, hideCompleted, onToggle }) {
+  const chapters = (reading.chapters ?? []).filter((chapter) => !hideCompleted || !chapter.done)
+  if (!chapters.length) return null
+  return (
+    <div className="mt-1 w-full space-y-1 pl-6">
+      <p className="text-xs font-medium text-muted">{chapters.length === 1 ? 'Kapittel:' : 'Kapitler:'}</p>
+      <ul className="space-y-1">
+        {chapters.map((chapter) => (
+          <li key={chapter.id}>
+            <label className="completion-row flex min-h-8 items-center gap-2 text-sm">
+              <input type="checkbox" checked={chapter.done} onChange={() => onToggle(reading.id, chapter.id)} className="h-4 w-4 shrink-0 accent-secondary" />
+              <span className={chapter.done ? 'text-muted line-through' : ''}>{chapter.text}</span>
+            </label>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export default function Pensum({ readings, subjects, onToggleReading, onToggleReadingChapter, onRemoveReading, onEditReading, hideCompleted = false, onToggleHideCompleted }) {
   const subjectById = useMemo(() => Object.fromEntries(subjects.map((s) => [s.id, s])), [subjects])
   const [week, setWeek] = useState(null)
@@ -72,6 +92,7 @@ export default function Pensum({ readings, subjects, onToggleReading, onToggleRe
                 >
                   Fjern
                 </button>
+                <ReadingChapters reading={r} hideCompleted={hideCompleted} onToggle={onToggleReadingChapter} />
               </div>
             ))}
           </div>
@@ -115,26 +136,7 @@ export default function Pensum({ readings, subjects, onToggleReading, onToggleRe
                     >
                       Fjern
                     </button>
-                    {(r.chapters?.length ?? 0) > 0 && (
-                      <div className="mt-1 w-full space-y-1 pl-6">
-                        <p className="text-xs font-medium text-muted">{(hideCompleted ? r.chapters.filter((chapter) => !chapter.done).length : r.chapters.length) === 1 ? 'Kapittel:' : 'Kapitler:'}</p>
-                        <ul className="space-y-1">
-                        {(hideCompleted ? r.chapters.filter((chapter) => !chapter.done) : r.chapters).map((c) => (
-                            <li key={c.id}>
-                              <label className="flex cursor-default items-center gap-2 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={c.done}
-                                onChange={() => onToggleReadingChapter(r.id, c.id)}
-                                className="h-4 w-4 accent-secondary"
-                              />
-                              <span className={c.done ? 'text-muted line-through' : ''}>{c.text}</span>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                      </div>
-                    )}
+                    <ReadingChapters reading={r} hideCompleted={hideCompleted} onToggle={onToggleReadingChapter} />
                   </div>
                 ))}
               </div>

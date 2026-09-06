@@ -9,7 +9,7 @@
     "supabase:start": "supabase start",
     "supabase:functions": "supabase functions serve study-suggestions --env-file supabase/.env.local",
     "supabase:stop": "supabase stop",
-    "build": "vite build",
+    "build": "vite build && node scripts/build-404.mjs",
     "lint": "oxlint",
     "test": "node --test \"src/lib/*.test.mjs\"",
     "preview": "vite preview"

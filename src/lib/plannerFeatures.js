@@ -146,45 +146,29 @@ export function proposeReschedules(data, now = new Date()) {
       .map((x) => ({ type: 'review', id: x.id, title: x.title, from: x.nextReview })),
   ].sort((a, b) => a.from.localeCompare(b.from))
   if (!candidates.length) return []
-  const nextSevenDays = Array.from({ length: 7 }, (_, index) => {
+  const nextDays = Array.from({ length: 21 }, (_, index) => {
     const date = new Date(now)
     date.setHours(0, 0, 0, 0)
     date.setDate(date.getDate() + index + 1)
     return iso(date)
   })
-  const nonExamDays = nextSevenDays.filter((date) => !exams.has(date))
-  const available = nonExamDays.length ? nonExamDays : nextSevenDays
-  const light = available.filter((date) => (lectureCount.get(date) || 0) < 3)
-  const heavy = available.filter((date) => (lectureCount.get(date) || 0) >= 3)
-  let pool = light.length >= candidates.length
-    ? light.slice(0, candidates.length)
-    : [...light, ...heavy].slice(0, candidates.length)
-  // ponytail: utvid 8..21 dager hvis for få lette dager, foretrekker lette → tunge → eksamensdager
-  if (pool.length < candidates.length) {
-    const extraLight = []
-    const extraHeavy = []
-    const extraExam = []
-    for (let offset = 8; offset <= 21 && extraLight.length + extraHeavy.length + extraExam.length + pool.length < candidates.length; offset++) {
-      const date = new Date(now)
-      date.setHours(0, 0, 0, 0)
-      date.setDate(date.getDate() + offset)
-      const ds = iso(date)
-      if (pool.includes(ds)) continue
-      if (exams.has(ds)) extraExam.push(ds)
-      else if ((lectureCount.get(ds) || 0) >= 3) extraHeavy.push(ds)
-      else extraLight.push(ds)
-    }
-    pool = [...pool, ...extraLight, ...extraHeavy, ...extraExam].slice(0, candidates.length)
-  }
-  // siste fallback hvis fortsatt tomt (alle dager har eksamen)
-  if (pool.length < candidates.length) {
-    for (let offset = 1; pool.length < candidates.length && offset <= 21; offset++) {
-      const date = new Date(now)
-      date.setHours(0, 0, 0, 0)
-      date.setDate(date.getDate() + offset)
-      const ds = iso(date)
-      if (!pool.includes(ds)) pool.push(ds)
-    }
-  }
-  return candidates.map((item, index) => ({ ...item, to: pool[index] }))
+  const nextWeek = nextDays.slice(0, 7).filter((date) => !exams.has(date))
+  const nonExamDays = nextDays.filter((date) => !exams.has(date))
+  const available = nextWeek.length >= candidates.length ? nextWeek : nonExamDays.length ? nonExamDays : nextDays
+  const workload = new Map(lectureCount)
+  for (const date of [
+    ...(data.assignments ?? []).filter((item) => item.status !== 'done').map((item) => item.deadline),
+    ...(data.reviews ?? []).map((item) => item.nextReview),
+  ]) workload.set(date, (workload.get(date) || 0) + 1)
+  const allocated = new Map()
+  // Reuse dates when necessary, distributing suggestions before adding another to a day.
+  return candidates.map((item) => {
+    const to = [...available].sort((a, b) =>
+      (allocated.get(a) || 0) - (allocated.get(b) || 0)
+      || (workload.get(a) || 0) - (workload.get(b) || 0)
+      || a.localeCompare(b),
+    )[0]
+    allocated.set(to, (allocated.get(to) || 0) + 1)
+    return { ...item, to }
+  })
 }

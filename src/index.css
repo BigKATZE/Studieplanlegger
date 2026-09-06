@@ -354,6 +354,24 @@
   input, select, textarea { font-size: 16px; }
 }
 
+.work-plan-progress {
+  transition: transform .28s cubic-bezier(.2, .8, .2, 1);
+}
+
+.completion-row span { transition: color .18s ease-out; }
+.completion-row input:checked { animation: completion-check .18s ease-out; }
+.step-disclosure[open] .step-details { animation: step-reveal .18s ease-out; }
+
+@keyframes completion-check {
+  from { transform: scale(.85); }
+  to { transform: scale(1); }
+}
+
+@keyframes step-reveal {
+  from { opacity: 0; transform: translateY(-3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;

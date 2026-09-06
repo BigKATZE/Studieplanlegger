@@ -57,6 +57,7 @@ export function useStore(user) {
   const storeGeneration = useRef(0)
   const lastWrite = useRef(0)
   const lastSynced = useRef(0)
+  const protectedWrite = useRef(false)
 
   const saveRemoteDebounced = useCallback(
     (payload) => {
@@ -79,6 +80,7 @@ export function useStore(user) {
             return
           }
           lastSynced.current = ts
+          protectedWrite.current = false
           setSyncStatus('saved')
           return
         }
@@ -97,10 +99,16 @@ export function useStore(user) {
         }
         if (row) {
           lastSynced.current = new Date(row.updated_at).getTime()
+          protectedWrite.current = false
           setSyncStatus('saved')
           return
         }
         setSyncStatus('conflict')
+        if (protectedWrite.current) {
+          // Keep the complete local archive instead of replacing it with a racing remote row.
+          remoteReady.current = false
+          return
+        }
         console.warn('Konflikt: raden ble endret av en annen enhet, henter nyeste versjon')
         const { data: fresh } = await supabase
           .from('user_data')
@@ -134,6 +142,7 @@ export function useStore(user) {
     storeGeneration.current++
     lastWrite.current = 0
     lastSynced.current = 0
+    protectedWrite.current = false
     if (!userId) {
       remoteReady.current = false
       setData(null)
@@ -187,7 +196,7 @@ export function useStore(user) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'user_data', filter: `user_id=eq.${userId}` },
         (payload) => {
-          if (!alive || !payload.new?.data) return
+          if (!alive || !payload.new?.data || protectedWrite.current) return
           if (new Date(payload.new.updated_at).getTime() <= lastWrite.current) return
           lastSynced.current = new Date(payload.new.updated_at).getTime()
           setData(normalize(payload.new.data))
@@ -219,5 +228,23 @@ export function useStore(user) {
     [dataOwner, userId, saveRemoteDebounced],
   )
 
-  return { data, update, ready: ready && dataOwner === userId, syncStatus }
+  // Archive/restore must persist successfully before replacing the active plan.
+  // Unlike a React state updater, this can report quota errors to the calling form.
+  const replace = useCallback((fn) => {
+    if (!ready || !data || dataOwner !== userId) throw new Error('Planen er ikke klar. Prøv igjen om litt.')
+    if (hasSupabase && userId !== 'local' && syncStatus !== 'saved') throw new Error('Vent til planen er synkronisert før du endrer arkivet. Ved synkfeil: last ned en sikkerhetskopi før du oppdaterer siden.')
+    const next = normalize(fn(data))
+    try {
+      localStorage.setItem(cacheKey(userId), JSON.stringify(next))
+    } catch {
+      throw new Error('Kunne ikke lagre endringen. Nettleserlagringen er full eller utilgjengelig. Den aktive planen er ikke endret.')
+    }
+    setData(next)
+    if (hasSupabase && userId !== 'local' && remoteReady.current) {
+      protectedWrite.current = true
+      saveRemoteDebounced(next)
+    }
+  }, [data, dataOwner, ready, userId, syncStatus, saveRemoteDebounced])
+
+  return { data, update, replace, ready: ready && dataOwner === userId, syncStatus }
 }

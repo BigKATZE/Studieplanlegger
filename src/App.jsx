@@ -28,6 +28,9 @@ import DeltArbeidsplan from './components/DeltArbeidsplan'
 import ShareSemesterModal from './components/ShareSemesterModal'
 import DeltOversikt from './components/DeltOversikt'
 import DelteLenker from './components/DelteLenker'
+import SemesterArchive from './components/SemesterArchive'
+import CalendarExport from './components/CalendarExport'
+import { archiveSemester, restoreSemester } from './lib/semesterArchive'
 import { advanceReview, applyWeekTemplate, createWeekTemplate, deferReview, findLectureConflictIds, makeReview } from './lib/plannerFeatures'
 
 const TABS = [
@@ -37,6 +40,7 @@ const TABS = [
   { id: 'tasks', label: 'Arbeidskrav' },
   { id: 'exams', label: 'Eksamener' },
   { id: 'ai', label: 'AI' },
+  { id: 'archive', label: 'Arkiv' },
 ]
 const ImportModal = lazy(() => import('./components/ImportModal'))
 const AiTools = lazy(() => import('./components/AiTools'))
@@ -65,7 +69,7 @@ function findTargetLecture(lectures, subject, date) {
 
 export default function App() {
   const { user, status: authStatus } = useAuth()
-  const { data, update, ready, syncStatus } = useStore(user ?? { id: 'local' })
+  const { data, update, replace, ready, syncStatus } = useStore(user ?? { id: 'local' })
   const [tab, setTab] = useState('timeplan')
   const [modal, setModal] = useState(null)
   const [editing, setEditing] = useState(null)
@@ -203,7 +207,11 @@ export default function App() {
     addQuizAttempt: (attempt) => update((d) => ({ ...d, quizAttempts: [...d.quizAttempts, { id: uid(), createdAt: new Date().toISOString(), ...attempt }] })),
     saveWorkPlan: (plan) => update((d) => ({ ...d, workPlans: [...d.workPlans, { ...plan, id: uid(), createdAt: new Date().toISOString(), steps: plan.steps.map((step) => ({ ...step, id: uid(), completed: false })) }] })),
     toggleWorkPlanStep: (planId, stepId) => update((d) => ({ ...d, workPlans: d.workPlans.map((plan) => plan.id === planId ? { ...plan, steps: plan.steps.map((step) => step.id === stepId ? { ...step, completed: !step.completed } : step) } : plan) })),
-    removeWorkPlan: (id) => update((d) => ({ ...d, workPlans: d.workPlans.filter((x) => x.id !== id) })),
+    removeWorkPlan: (id) => {
+      const plan = data.workPlans.find((item) => item.id === id)
+      const index = data.workPlans.findIndex((item) => item.id === id)
+      removeWithUndo(`Fjernet «${plan?.title ?? 'arbeidsplan'}»`, (d) => ({ ...d, workPlans: d.workPlans.filter((item) => item.id !== id) }), (d) => restoreItem(d, 'workPlans', plan, index))
+    },
     applyReschedules: (items) => {
       const prevAssignments = new Map(data.assignments.filter((a) => items.some((y) => y.type === 'assignment' && y.id === a.id)).map((a) => [a.id, a.deadline]))
       const prevReviews = new Map(data.reviews.filter((r) => items.some((y) => y.type === 'review' && y.id === r.id)).map((r) => [r.id, r.nextReview]))
@@ -644,6 +652,7 @@ export default function App() {
 
         <div className="app-toolbar mt-5 flex flex-wrap gap-2">
           <button onClick={() => openModal('import')} className="btn-primary">Importer</button>
+          <button onClick={() => openModal('calendarExport')} className="btn-ghost">Eksporter kalender</button>
           <button onClick={() => setFocusTarget({})} className="btn-ghost">Fokus</button>
         </div>
         <div className="app-toolbar mt-2 flex flex-wrap gap-2">
@@ -761,9 +770,9 @@ export default function App() {
                 onEditAssignment={(a) => openEdit('assignment', a)}
                 hideCompleted={hideCompleted}
                 onToggleHideCompleted={() => setHideCompleted((value) => !value)}
-                completedCount={bySubject(data.assignments).filter((assignment) => assignment.status === 'done').length + data.workPlans.reduce((total, plan) => total + plan.steps.filter((step) => step.completed).length, 0)}
+                completedCount={bySubject(data.assignments).filter((assignment) => assignment.status === 'done').length + bySubject(data.workPlans).reduce((total, plan) => total + plan.steps.filter((step) => step.completed).length, 0)}
               />
-              <WorkPlans plans={data.workPlans} subjects={data.subjects} onToggle={actions.toggleWorkPlanStep} onRemove={actions.removeWorkPlan} onShare={setSharePlan} canShare={Boolean(hasSupabase && user && user.id !== 'local')} hideCompleted={hideCompleted} />
+              <WorkPlans plans={bySubject(data.workPlans)} subjects={data.subjects} onToggle={actions.toggleWorkPlanStep} onRemove={actions.removeWorkPlan} onShare={setSharePlan} canShare={Boolean(hasSupabase && user && user.id !== 'local')} hideCompleted={hideCompleted} />
             </div>
           </div>
         )}
@@ -794,6 +803,19 @@ export default function App() {
         )}
 
         {tab === 'changelog' && <div key="changelog"><Changelog /></div>}
+        {tab === 'archive' && <SemesterArchive key={user?.id ?? 'local'} data={data} syncStatus={syncStatus}
+          onArchive={(name) => {
+            const id = uid()
+            replace((current) => archiveSemester(current, name, id))
+            setUndo(null); setFilterSubjectId(null); setTimeplanWeek(null); setFocusTarget(null)
+          }}
+          onRestore={(id) => {
+            const replacementId = uid()
+            replace((current) => restoreSemester(current, id, replacementId))
+            setUndo(null); setFilterSubjectId(null); setTimeplanWeek(null); setFocusTarget(null)
+          }}
+          onRemove={(id) => replace((current) => ({ ...current, semesterArchives: current.semesterArchives.filter((item) => item.id !== id) }))}
+        />}
       </main>
 
       <footer className="mx-auto max-w-5xl px-4 pb-10">
@@ -804,13 +826,14 @@ export default function App() {
               openModal('deleteAll')
             }}
             className="btn-danger"
-            disabled={!data.subjects.length && !data.lectures.length && !data.readings.length && !data.assignments.length && !data.exams.length && !data.reviews.length && !data.weekTemplates.length && !data.aiSources.length && !data.quizAttempts.length && !data.workPlans.length}
+            disabled={!data.subjects.length && !data.lectures.length && !data.readings.length && !data.assignments.length && !data.exams.length && !data.reviews.length && !data.weekTemplates.length && !data.aiSources.length && !data.quizAttempts.length && !data.workPlans.length && !data.semesterArchives.length}
           >
             Slett alt
           </button>
         </div>
       </footer>
 
+      {modal === 'calendarExport' && <CalendarExport key={user?.id ?? 'local'} data={data} onClose={closeModal} />}
       {modal === 'subject' && (
         <Modal title={editing ? 'Rediger fag' : 'Nytt fag'} onClose={closeModal}>
           <SubjectForm initial={editing} onAdd={editing ? actions.updateSubject : actions.addSubject} onClose={closeModal} />
@@ -857,8 +880,8 @@ export default function App() {
         <Modal title={deleteAllStep === 1 ? 'Slett alt innhold?' : 'Bekreft permanent sletting'} onClose={closeModal}>
           <p className="text-sm text-ink">
             {deleteAllStep === 1
-              ? 'Vil du fortsette? Alle fag, forelesninger, pensum, arbeidskrav og eksamener blir valgt for sletting.'
-              : 'Dette kan ikke angres. Er du helt sikker på at alt innhold skal slettes permanent?'}
+              ? 'Vil du fortsette? Alt innhold, inkludert semesterarkivet, blir valgt for sletting.'
+              : 'Dette kan ikke angres. Er du helt sikker på at alt innhold, inkludert semesterarkivet, skal slettes permanent?'}
           </p>
           <div className="mt-4 flex justify-end gap-2">
             <button type="button" onClick={closeModal} className="btn-ghost">Avbryt</button>

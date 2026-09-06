@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { daysUntil, fmtShort, isoToDisplayDate, displayDateToIso, isValidTime } from '../lib/date'
 
 const fieldInputCls =
@@ -87,6 +87,11 @@ export function Select({ value, onChange, options, className = '', ariaLabel, pl
   const ref = useRef(null)
   const btnRef = useRef(null)
   const optionRefs = useRef([])
+  const listId = useId()
+  const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value))
+  useEffect(() => {
+    if (open) optionRefs.current[selectedIndex]?.focus()
+  }, [open, selectedIndex])
   useEffect(() => {
     if (!open) return
     const onDoc = (e) => {
@@ -107,7 +112,6 @@ export function Select({ value, onChange, options, className = '', ariaLabel, pl
       e.preventDefault()
       if (!open) {
         setOpen(true)
-        focusOption(Math.max(0, options.findIndex((o) => o.value === value)))
         return
       }
       const cur = optionRefs.current.findIndex((el) => el === document.activeElement)
@@ -122,10 +126,15 @@ export function Select({ value, onChange, options, className = '', ariaLabel, pl
       e.preventDefault()
       setOpen(false)
       btnRef.current?.focus()
+    } else if (e.key === 'Tab' && open) {
+      btnRef.current?.focus()
+      setOpen(false)
     }
   }
   return (
-    <div ref={ref} className={`relative ${className}`} onKeyDown={onKeyDown}>
+    <div ref={ref} className={`relative ${className}`} onKeyDown={onKeyDown} onBlur={(event) => {
+      if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false)
+    }}>
       <button
         ref={btnRef}
         type="button"
@@ -133,6 +142,7 @@ export function Select({ value, onChange, options, className = '', ariaLabel, pl
         aria-label={ariaLabel}
         aria-expanded={open}
         aria-haspopup="listbox"
+        aria-controls={open ? listId : undefined}
         className={`flex w-full items-center justify-between gap-2.5 rounded-[12px] border bg-surface px-3.5 py-2.5 text-sm font-medium shadow-sm transition-all duration-200 hover:shadow-md active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-secondary/15 ${open ? 'border-secondary/30 bg-surface shadow-md ring-2 ring-secondary/10' : 'border-line hover:border-muted hover:bg-surface'}`}
       >
         <span className="truncate text-left text-ink">{selected ? selected.label : <span className="text-muted">{placeholder}</span>}</span>
@@ -145,17 +155,19 @@ export function Select({ value, onChange, options, className = '', ariaLabel, pl
         </svg>
       </button>
       {open && (
-        <div role="listbox" className="select-menu absolute z-50 mt-2 max-h-64 w-full overflow-auto rounded-xl bg-surface border border-line p-1.5 shadow-[0_16px_40px_rgba(23,33,31,0.12),0_4px_12px_rgba(23,33,31,0.08)]">
+        <div id={listId} role="listbox" aria-label={ariaLabel || placeholder} className="select-menu absolute z-50 mt-2 max-h-64 w-full overflow-auto rounded-xl bg-surface border border-line p-1.5 shadow-[0_16px_40px_rgba(23,33,31,0.12),0_4px_12px_rgba(23,33,31,0.08)]">
           {options.map((o, i) => (
             <button
               key={o.value}
               ref={(el) => (optionRefs.current[i] = el)}
               type="button"
               role="option"
+              tabIndex={-1}
               aria-selected={o.value === value}
               onClick={() => {
                 onChange(o.value)
                 setOpen(false)
+                btnRef.current?.focus()
               }}
               className={`group flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-all duration-150 ${o.value === value ? 'bg-secondary/[0.09] font-medium text-ink shadow-sm ring-1 ring-secondary/10' : 'text-muted hover:bg-paper/65 hover:text-ink'}`}
             >

@@ -18,6 +18,7 @@ const data = {
   workPlans: [{ title: 'HEMMELIG PLAN' }],
   reviews: [{ title: 'HEMMELIG REPETISJON' }],
   weekTemplates: [{ name: 'HEMMELIG MAL' }],
+  semesterArchives: [{ name: 'HEMMELIG ARKIV', data: { subjects: [{ name: 'HEMMELIG FAG' }] } }],
 }
 
 const result = extractSharedSemester(data)

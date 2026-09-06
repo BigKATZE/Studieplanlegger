@@ -10,7 +10,7 @@ const COLOR_NAMES = {
   '#ec4899': 'Rosa', '#14b8a6': 'Mint', '#0369a1': 'Havblå', '#a21caf': 'Plomme', '#f97316': 'Terrakotta', '#06b6d4': 'Himmel', '#4d7c0f': 'Oliven', '#1d4ed8': 'Marine',
 }
 
-export function Modal({ title, onClose, children }) {
+export function Modal({ title, onClose, children, solid = false }) {
   const panelRef = useRef(null)
   useEffect(() => {
     const prev = document.activeElement
@@ -18,6 +18,14 @@ export function Modal({ title, onClose, children }) {
     ;(first ?? panelRef.current)?.focus()
     const onKey = (e) => {
       if (e.key === 'Escape') onClose()
+      if (e.key === 'Tab') {
+        const focusable = [...(panelRef.current?.querySelectorAll('a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), button:not(:disabled), [tabindex="0"]') ?? [])].filter((element) => element.getClientRects().length)
+        const first = focusable[0]
+        const last = focusable.at(-1)
+        if (!first) { e.preventDefault(); panelRef.current?.focus() }
+        else if (e.shiftKey && (document.activeElement === first || document.activeElement === panelRef.current)) { e.preventDefault(); last.focus() }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+      }
     }
     document.addEventListener('keydown', onKey)
     return () => {
@@ -33,7 +41,7 @@ export function Modal({ title, onClose, children }) {
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        className="glass-panel animate-scale-in mx-auto w-full max-w-lg rounded-xl p-6"
+        className={`${solid ? 'border border-line bg-surface' : 'glass-panel'} animate-scale-in mx-auto w-full max-w-lg rounded-xl p-6`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4 flex items-center justify-between">

@@ -1,6 +1,6 @@
 const KEY = 'oliarev-study-planner-v2'
 const LEGACY_KEY = 'oliarev-study-planner-v1'
-const EMPTY_DATA = { subjects: [], lectures: [], assignments: [], exams: [], readings: [], reviews: [], weekTemplates: [], aiSources: [], quizAttempts: [], workPlans: [] }
+const EMPTY_DATA = { subjects: [], lectures: [], assignments: [], exams: [], readings: [], reviews: [], weekTemplates: [], aiSources: [], quizAttempts: [], workPlans: [], semesterArchives: [] }
 
 export function uid() {
   return crypto.randomUUID()
@@ -90,7 +90,8 @@ function normalizeWorkPlan(item) {
   return { id: cleanText(item.id, 128), assignmentId: cleanText(item.assignmentId, 128), subjectId: cleanText(item.subjectId, 128), title: cleanText(item.title, 300), summary: cleanText(item.summary), requirements: Array.isArray(item.requirements) ? item.requirements.map((x) => cleanText(x, 500)).filter(Boolean).slice(0, 15) : [], steps, clarifications: Array.isArray(item.clarifications) ? item.clarifications.map((x) => cleanText(x, 500)).filter(Boolean).slice(0, 10) : [], createdAt: cleanText(item.createdAt, 80) }
 }
 
-const ALLOWED_BACKUP_KEYS = ['subjects', 'lectures', 'assignments', 'exams', 'readings', 'reviews', 'weekTemplates', 'aiSources', 'quizAttempts', 'workPlans']
+export const PLANNER_COLLECTIONS = ['subjects', 'lectures', 'assignments', 'exams', 'readings', 'reviews', 'weekTemplates', 'aiSources', 'quizAttempts', 'workPlans']
+const ALLOWED_BACKUP_KEYS = [...PLANNER_COLLECTIONS, 'semesterArchives']
 const FORBIDDEN_KEYS = ['__proto__', 'constructor', 'prototype']
 
 function sanitizePlannerString(value, max) {
@@ -163,9 +164,9 @@ function normalizeReading(item) {
   }
 }
 
-export function normalizePlannerData(data) {
-  if (!isRecord(data)) return { ...EMPTY_DATA }
-  if (FORBIDDEN_KEYS.some((key) => Object.prototype.hasOwnProperty.call(data, key))) return { ...EMPTY_DATA }
+export function normalizePlannerData(data, includeArchives = true) {
+  if (!isRecord(data)) return normalizePlannerData({}, includeArchives)
+  if (FORBIDDEN_KEYS.some((key) => Object.prototype.hasOwnProperty.call(data, key))) return normalizePlannerData({}, includeArchives)
   const unique = (items) => {
     const ids = new Set()
     return items.filter((item) => {
@@ -185,13 +186,22 @@ export function normalizePlannerData(data) {
     aiSources: unique((Array.isArray(data.aiSources) ? data.aiSources : []).map(normalizeSource)).slice(0, 25),
     quizAttempts: unique((Array.isArray(data.quizAttempts) ? data.quizAttempts : []).map(normalizeAttempt)).slice(-200),
     workPlans: unique((Array.isArray(data.workPlans) ? data.workPlans : []).map(normalizeWorkPlan)).slice(0, 100),
+    ...(includeArchives ? {
+      semesterArchives: unique((Array.isArray(data.semesterArchives) ? data.semesterArchives : [])
+        .filter((item) => isRecord(item) && cleanText(item.id, 128) && cleanText(item.name, 100) && isRecord(item.data))
+        .map((item) => ({ id: cleanText(item.id, 128), name: cleanText(item.name, 100), createdAt: cleanText(item.createdAt, 80), data: normalizePlannerData(item.data, false) }))),
+    } : {}),
   }
 }
 
-export function isValidBackupData(data) {
+export function isValidBackupData(data, includeArchives = true) {
   if (!isRecord(data) || !Array.isArray(data.subjects) || !Array.isArray(data.lectures)) return false
   if (Object.keys(data).some((key) => FORBIDDEN_KEYS.includes(key) || !ALLOWED_BACKUP_KEYS.includes(key))) return false
   if (ALLOWED_BACKUP_KEYS.some((key) => Array.isArray(data[key]) && data[key].length > 10000)) return false
+  if (!includeArchives && 'semesterArchives' in data) return false
+  if ('semesterArchives' in data && (!Array.isArray(data.semesterArchives) || data.semesterArchives.length > 20 || !data.semesterArchives.every((item) =>
+    isRecord(item) && cleanText(item.id, 128) && cleanText(item.name, 100) && isValidBackupData(item.data, false),
+  ))) return false
   return ALLOWED_BACKUP_KEYS.every((key) => !(key in data) || Array.isArray(data[key]))
 }
 

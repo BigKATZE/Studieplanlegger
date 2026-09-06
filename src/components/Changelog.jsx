@@ -1,5 +1,61 @@
 const RELEASES = [
   {
+    version: 'v1.3',
+    date: '2026-09-06',
+    dateLabel: '6. september 2026',
+    title: 'Semesterarkiv og kalendereksport',
+    summary: 'Bevar tidligere semestre, ta med planen til kalenderen din og få bedre oversikt over arbeidsplanene. Versjonen inneholder også nye feilsider og forbedringer i tilgjengelighet og lagring.',
+    groups: [
+      {
+        title: 'Semesterarkiv',
+        items: [
+          'Ny Arkiv-fane bevarer hele den aktive planen, inkludert pensum, repetisjoner, arbeidsplaner og AI-kilder. Arbeidsflaten tømmes først etter bekreftelse.',
+          'Se arkivert innhold, last ned sikkerhetskopi eller gjenopprett et semester. Ved gjenoppretting arkiveres eventuell aktiv plan automatisk først.',
+          'Inntil 20 semestre kan arkiveres. Komplette sikkerhetskopier inkluderer arkivet, og sletting av arkiv krever bekreftelse.',
+        ],
+      },
+      {
+        title: 'Kalendereksport',
+        items: [
+          'Ny knapp «Eksporter kalender» ved siden av Importer laster ned forelesninger, arbeidskravfrister, eksamener og repetisjoner som en .ics-fil.',
+          'Filtrer eksporten på fag, datoer og hendelsestyper, og velg om fullførte elementer skal tas med.',
+          'Klokkeslett bruker norsk sommer- og vintertid. Hendelser uten klokkeslett blir heldagshendelser. Ugyldige datoer og tider utelates med beskjed.',
+          'Eksporten er en manuell kopi, ikke automatisk synkronisering. Semesterarkivet og private AI-kilder tas ikke med.',
+        ],
+      },
+      {
+        title: 'Lagrede arbeidsplaner',
+        items: [
+          'Arbeidsplaner viser fremdrift, estimert gjenstående tid og detaljer med ferdigkriterier for hvert steg.',
+          'Arbeidsplaner og antallet fullførte steg følger nå fagfilteret. Sletting av en arbeidsplan kan angres.',
+        ],
+      },
+      {
+        title: 'Pensum og omplanlegging',
+        items: [
+          'Pensum uten uke viser nå kapitler som kan krysses av og skjules når de er lest.',
+          'Omplanlegging håndterer også flere enn 21 forfalte elementer uten tomme datoer, fordeler forslagene og tar hensyn til planlagt arbeid og eksamensdager.',
+        ],
+      },
+      {
+        title: 'Feilsider og tilgjengelighet',
+        items: [
+          'Egen 404-side for ukjente adresser og en tilpasset side ved uventede appfeil, med vei tilbake til planen og mulighet for å laste siden på nytt.',
+          'Bedre tastaturstyring og fokus i nedtrekksmenyer og dialoger. Arkiv og eksport er tilpasset mobil, lys og mørk modus.',
+          'Diskrete animasjoner ved fullføring, oppdatering av fremdrift og åpning av stegdetaljer, med støtte for redusert bevegelse.',
+        ],
+      },
+      {
+        title: 'Lagring og kvalitetssikring',
+        items: [
+          'Arkivendringer lagres lokalt før den aktive planen erstattes. Full eller utilgjengelig nettleserlagring gir en feilmelding uten å endre planen.',
+          'Arkivendringer krever klar kontosynkronisering. Ved synkkonflikt etter arkivering beholdes den lokale kopien med beskjed om å ta sikkerhetskopi.',
+          'Utvidede tester for arkiv, sikkerhetskopier, kalendereksport, feilsider, tastaturbruk, mobil og simulerte lagrings- og synkfeil.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v1.2.6', date: '2026-08-24', dateLabel: '24. august 2026', title: 'Del hele semesteret med én lenke', summary: 'Ny delingslenke som gir en skrivebeskyttet oversikt over alle fagene dine - timeplan, pensum, arbeidskrav og eksamener.', groups: [
       { title: 'Deling', items: ['Ny knapp «Del hele oversikten» på Oversikt-fanen lager en skrivebeskyttet lenke til alle fagene dine.', 'Mottakeren ser timeplan, pensum, arbeidskrav og eksamener per fag, med fullføringsstatus.', 'Lenken viser alltid gjeldende plan, utløper etter 30 dager og kan tilbakekalles når som helst.'] },
       { title: 'Visning', items: ['Ny knapp «Skjul fullførte» ved ukevelgeren på Timeplan, Pensum, Arbeidskrav og Eksamener.', 'Knappen skjuler ferdige elementer uten å slette dem, og valget huskes lokalt.'] },

@@ -190,6 +190,7 @@ function BackupTab({ data, onImport, onClose }) {
     exams: confirm.exams.length,
     reviews: confirm.reviews.length,
     weekTemplates: confirm.weekTemplates.length,
+    archives: confirm.semesterArchives.length,
   }
 
   return (
@@ -210,7 +211,7 @@ function BackupTab({ data, onImport, onClose }) {
           onChange={(e) => handleFile(e.target.files?.[0])}
           className="file-input block w-full text-sm text-muted"
         />
-        <p className="mt-1 text-xs text-muted">Importering erstatter alt nåværende innhold.</p>
+        <p className="mt-1 text-xs text-muted">Importering erstatter alt nåværende innhold, inkludert semesterarkivet. Last ned en sikkerhetskopi først.</p>
       </div>
 
       {error && <p className="rounded-md bg-danger/10 px-3 py-2 text-sm text-danger">{error}</p>}
@@ -219,7 +220,7 @@ function BackupTab({ data, onImport, onClose }) {
         <div className="rounded-md border border-line bg-paper/60 p-3 text-sm">
           <p className="text-ink">
             «{fileName}» inneholder {counts.subjects} fag, {counts.lectures} forelesninger, {counts.readings} pensum,{' '}
-            {counts.assignments} arbeidskrav, {counts.exams} eksamener, {counts.reviews} repetisjoner og {counts.weekTemplates} ukemaler.
+            {counts.assignments} arbeidskrav, {counts.exams} eksamener, {counts.reviews} repetisjoner, {counts.weekTemplates} ukemaler og {counts.archives} arkiverte semestre.
           </p>
           <p className="mt-1 text-xs text-muted">Erstatte alt nåværende innhold med dette?</p>
           <div className="mt-3 flex justify-end gap-2">
