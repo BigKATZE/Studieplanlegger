@@ -1,5 +1,49 @@
 const RELEASES = [
   {
+    version: 'v1.4',
+    date: '2026-09-07',
+    dateLabel: '7. september 2026',
+    title: 'Enklere mobilbruk og bedre ukeplanlegging',
+    summary: 'Fast mobilnavigasjon, samlet eksport og ukentlig tidsbudsjett gjør planen enklere å bruke. Kalenderabonnement er også klargjort, med personlige lenker som kan deaktiveres.',
+    groups: [
+      {
+        title: 'Mobil og navigasjon',
+        items: [
+          'Faneraden blir øverst når du ruller på mobil. Fanebytte viser starten av innholdet, og utilsiktet vertikal rulling inne i faneraden er fjernet.',
+          'Opprettingsknappene er samlet under «Legg til» på mobil. Importer, Eksporter og Fokus ligger på én kompakt rad, mens desktop beholder knappene.',
+          'Større trykkflater og bedre tastaturfokus. Escape lukker først en åpen nedtrekksmeny, og dialoger gir fokus tilbake når de lukkes.',
+        ],
+      },
+      {
+        title: 'Samlet eksport',
+        items: [
+          'Én «Eksporter»-knapp med samme stil som Importer samler kalenderfil og komplett sikkerhetskopi.',
+          'Fagvelgeren i kalendereksport bruker samme nedtrekksmeny som resten av appen. Kalenderfiltrene beholdes når du bytter eksportvalg.',
+          'Gjenoppretting av sikkerhetskopi ligger fortsatt under Importer og krever bekreftelse før innhold erstattes.',
+        ],
+      },
+      {
+        title: 'Ukebelastning',
+        items: [
+          'Ny ukebelastning under Oversikt sammenligner tidsestimater med et eget, fast ukentlig budsjett for egenstudier.',
+          'Legg inn estimert tid i minutter på arbeidskrav og pensum. Arbeidskrav telles i uken med fristen, og pensum i valgt uke innenfor gjeldende skoleår.',
+          'Visningen varsler om overbelastning og manglende estimater. Fullførte oppgaver utelates, mens forfalte arbeidskrav utenfor valgt uke og oppgaver uten gyldig frist eller uke vises separat.',
+          'Budsjett og estimater følger lagring, kontosynkronisering, sikkerhetskopier og semesterarkiv. Forelesningstid og arbeidsplansteg telles ikke dobbelt.',
+        ],
+      },
+      {
+        title: 'Kalenderabonnement',
+        items: [
+          'Nytt valg under Eksporter → Kalender for et enveis abonnement på utvalgte fag og hendelser fra den synkroniserte planen. Opprettelse krever innlogging og ferdig synkronisering.',
+          'Én aktiv, hemmelig lenke per konto. Lenken vises bare ved opprettelse og kan deaktiveres før en ny lages. Bare en hash av nøkkelen lagres på serveren.',
+          'Fullførte hendelser beholdes som historikk. Semesterarkiv, notater og AI-kilder tas ikke med, og nye fag legges ikke til automatisk.',
+          'Kalenderappen bestemmer oppdateringsintervallet og kan beholde nedlastede kopier. Alle som har lenken, kan lese kalenderinnholdet den gir tilgang til.',
+          'Krever at den nye databasemigreringen og calendar-subscription-funksjonen publiseres til Supabase før abonnement kan tas i bruk.',
+        ],
+      },
+    ],
+  },
+  {
     version: 'v1.3',
     date: '2026-09-06',
     dateLabel: '6. september 2026',

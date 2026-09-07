@@ -142,22 +142,10 @@ function PdfImport({ subjects, onImport, onClose }) {
   )
 }
 
-function BackupTab({ data, onImport, onClose }) {
+function BackupTab({ onImport, onClose }) {
   const [error, setError] = useState('')
   const [confirm, setConfirm] = useState(null)
   const [fileName, setFileName] = useState('')
-
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `studieplanlegger-${new Date().toISOString().slice(0, 10)}.json`
-    document.body.appendChild(a)
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
-  }
 
   const handleFile = async (file) => {
     if (!file) return
@@ -195,15 +183,7 @@ function BackupTab({ data, onImport, onClose }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-sm text-ink">Eksporter alt innhold som en JSON-fil.</p>
-          <p className="text-xs text-muted">Nyttig som sikkerhetskopi eller for å flytte mellom nettlesere.</p>
-        </div>
-        <button type="button" onClick={exportJson} className="btn-ghost">Eksporter data</button>
-      </div>
-
-      <div className="border-t border-line pt-4">
+      <div>
         <span className="mb-1 block text-xs font-medium text-muted">Importer sikkerhetskopi</span>
         <input
           type="file"
@@ -268,7 +248,7 @@ export default function ImportModal({ subjects, data, onImportPdf, onImportIcs, 
       ) : mode === 'ical' ? (
         <IcsImport subjects={subjects} data={data} onImport={onImportIcs} onClose={onClose} />
       ) : (
-        <BackupTab data={data} onImport={onImportBackup} onClose={onClose} />
+        <BackupTab onImport={onImportBackup} onClose={onClose} />
       )}
     </Modal>
   )

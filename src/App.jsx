@@ -29,7 +29,8 @@ import ShareSemesterModal from './components/ShareSemesterModal'
 import DeltOversikt from './components/DeltOversikt'
 import DelteLenker from './components/DelteLenker'
 import SemesterArchive from './components/SemesterArchive'
-import CalendarExport from './components/CalendarExport'
+import ExportModal from './components/ExportModal'
+import WeeklyWorkload from './components/WeeklyWorkload'
 import { archiveSemester, restoreSemester } from './lib/semesterArchive'
 import { advanceReview, applyWeekTemplate, createWeekTemplate, deferReview, findLectureConflictIds, makeReview } from './lib/plannerFeatures'
 
@@ -72,6 +73,7 @@ export default function App() {
   const { data, update, replace, ready, syncStatus } = useStore(user ?? { id: 'local' })
   const [tab, setTab] = useState('timeplan')
   const [modal, setModal] = useState(null)
+  const [addOpen, setAddOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [filterSubjectId, setFilterSubjectId] = useState(null)
   const [showLogin, setShowLogin] = useState(false)
@@ -145,8 +147,10 @@ export default function App() {
     setEditing(null)
   }
   const openModal = (m) => {
+    if (addOpen && window.matchMedia('(max-width: 767px)').matches) document.getElementById('add-toggle')?.focus()
     setModal(m)
     setEditing(null)
+    setAddOpen(false)
   }
 
   const deleteAll = () => {
@@ -526,7 +530,7 @@ export default function App() {
         <div className="orb orb-2" />
         <div className="orb orb-3" />
       </div>
-      <header className="mx-auto max-w-5xl px-4 pb-6 pt-5 sm:pt-8 animate-fade-in">
+      <header className="mx-auto max-w-5xl px-4 pt-5 sm:pt-8 animate-fade-in">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <div className="flex items-center gap-2.5">
             <a
@@ -634,12 +638,17 @@ export default function App() {
         <p className="mt-3 text-sm text-muted">Timeplan, pensum, arbeidskrav og eksamener - uke for uke.</p>
 
         <SmartInput subjects={data.subjects} onApply={applySmartAction} />
-
-        <nav className="tab-strip mt-7 flex gap-1 overflow-x-auto border-b border-line" aria-label="Sider">
+      </header>
+      <div className="app-navigation mx-auto mt-7 max-w-5xl px-4">
+        <nav className="tab-strip flex gap-1 overflow-x-auto border-b border-line" aria-label="Sider">
           {TABS.map((t) => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => {
+                setTab(t.id)
+                setAddOpen(false)
+                if (window.matchMedia('(max-width: 767px)').matches) document.getElementById('main-content')?.scrollIntoView({ block: 'start' })
+              }}
               aria-current={tab === t.id ? 'page' : undefined}
               className={`-mb-px whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors duration-150 ${
                 tab === t.id ? 'border-primary text-primary tab-active' : 'border-transparent text-muted hover:text-ink'
@@ -649,22 +658,34 @@ export default function App() {
             </button>
           ))}
         </nav>
-
-        <div className="app-toolbar mt-5 flex flex-wrap gap-2">
+      </div>
+      <div className="mx-auto max-w-5xl px-4 pb-6">
+        <div className="app-toolbar primary-toolbar mt-5 flex flex-wrap gap-2">
           <button onClick={() => openModal('import')} className="btn-primary">Importer</button>
-          <button onClick={() => openModal('calendarExport')} className="btn-ghost">Eksporter kalender</button>
+          <button onClick={() => openModal('export')} className="btn-primary">Eksporter</button>
           <button onClick={() => setFocusTarget({})} className="btn-ghost">Fokus</button>
         </div>
-        <div className="app-toolbar mt-2 flex flex-wrap gap-2">
+        <div className="mt-2" onKeyDown={(event) => {
+          if (event.key === 'Escape' && addOpen) {
+            setAddOpen(false)
+            event.currentTarget.querySelector('button')?.focus()
+          }
+        }}>
+          <button id="add-toggle" type="button" className="btn-ghost min-h-11 w-full md:hidden" aria-expanded={addOpen} aria-controls="add-actions" onClick={() => setAddOpen((open) => !open)}>
+            Legg til
+            <svg aria-hidden="true" className={`h-4 w-4 ${addOpen ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m5 7 5 5 5-5" /></svg>
+          </button>
+        <div id="add-actions" className={`${addOpen ? 'grid' : 'hidden'} mt-2 gap-2 md:mt-0 md:flex md:flex-wrap`}>
           <button onClick={() => openModal('subject')} className="btn-ghost">Nytt fag</button>
           <button onClick={() => openModal('lecture')} className="btn-ghost">Ny forelesning</button>
           <button onClick={() => openModal('reading')} className="btn-ghost">Nytt pensum</button>
           <button onClick={() => openModal('assignment')} className="btn-ghost">Nytt arbeidskrav</button>
           <button onClick={() => openModal('exam')} className="btn-ghost">Ny eksamen</button>
         </div>
-      </header>
+        </div>
+      </div>
 
-      <main className="mx-auto max-w-5xl px-4 pb-20">
+      <main id="main-content" className="mx-auto max-w-5xl px-4 pb-20">
         {tab === 'overview' && (
           <div key="overview">
             {Boolean(hasSupabase && user && user.id !== 'local') && (
@@ -690,6 +711,7 @@ export default function App() {
               conflictCount={conflictCount}
               onFocus={setFocusTarget}
             />
+            <WeeklyWorkload key={user?.id ?? 'local'} data={data} onBudgetChange={(weeklyBudgetMinutes) => update((current) => ({ ...current, weeklyBudgetMinutes }))} />
             <ReviewPlan reviews={data.reviews} subjects={data.subjects} onAdd={actions.addReview} onComplete={actions.completeReview} onDefer={actions.deferReview} onRemove={actions.removeReview} />
             <ReschedulePanel data={data} onApply={actions.applyReschedules} />
             <SubjectPanel
@@ -833,7 +855,7 @@ export default function App() {
         </div>
       </footer>
 
-      {modal === 'calendarExport' && <CalendarExport key={user?.id ?? 'local'} data={data} onClose={closeModal} />}
+      {modal === 'export' && <ExportModal key={user?.id ?? 'local'} data={data} user={user} syncStatus={syncStatus} onClose={closeModal} />}
       {modal === 'subject' && (
         <Modal title={editing ? 'Rediger fag' : 'Nytt fag'} onClose={closeModal}>
           <SubjectForm initial={editing} onAdd={editing ? actions.updateSubject : actions.addSubject} onClose={closeModal} />

@@ -1,4 +1,5 @@
 import { iso, isoWeek, weekRangeByWeek } from './date.js'
+import { normalizeMinutes } from './store.js'
 
 export const REVIEW_INTERVALS = [1, 3, 7, 14]
 
@@ -40,6 +41,53 @@ export function findLectureConflictIds(lectures = []) {
 export function readingComplete(reading) {
   const chapters = (reading.chapters ?? []).filter((chapter) => chapter.text?.trim())
   return Boolean(reading.done) || (chapters.length > 0 && chapters.every((chapter) => chapter.done))
+}
+
+export function weeklyWorkload(data, date = new Date(), now = new Date()) {
+  const monday = new Date(date)
+  if (!Number.isFinite(monday.getTime()) || !Number.isFinite(now.getTime())) throw new Error('Ugyldig dato for ukebelastning.')
+  monday.setHours(12, 0, 0, 0)
+  monday.setDate(monday.getDate() - (monday.getDay() + 6) % 7)
+  const sunday = new Date(monday)
+  sunday.setDate(sunday.getDate() + 6)
+  const from = iso(monday)
+  const to = iso(sunday)
+  const today = iso(now)
+  const schoolYear = now.getMonth() >= 7 ? now.getFullYear() : now.getFullYear() - 1
+  const inWeek = (value) => value >= from && value <= to
+  const groups = { assignments: [], readings: [], overdue: [], unplanned: [] }
+  for (const item of data.assignments ?? []) {
+    if (item.status === 'done') continue
+    if (!localDate(item.deadline)) groups.unplanned.push(item)
+    else if (inWeek(item.deadline)) groups.assignments.push(item)
+    else if (item.deadline < today) groups.overdue.push(item)
+  }
+  for (const item of data.readings ?? []) {
+    if (readingComplete(item)) continue
+    if (!Number.isInteger(item.week) || item.week < 1 || item.week > 53) {
+      groups.unplanned.push(item)
+      continue
+    }
+    // ponytail: week-only readings assume one school year; persist weekStart for multi-year plans.
+    const year = item.week >= 34 ? schoolYear : schoolYear + 1
+    const start = new Date(year, 0, 4, 12)
+    start.setDate(start.getDate() - (start.getDay() + 6) % 7 + (item.week - 1) * 7)
+    if (isoWeek(start) !== item.week) groups.unplanned.push(item)
+    else if (iso(start) === from) groups.readings.push(item)
+  }
+  const summaries = Object.fromEntries(Object.entries(groups).map(([key, items]) => [key, {
+    count: items.length,
+    minutes: items.reduce((sum, item) => sum + (normalizeMinutes(item.estimatedMinutes) ?? 0), 0),
+    missing: items.filter((item) => normalizeMinutes(item.estimatedMinutes) === null).length,
+  }]))
+  const minutes = summaries.assignments.minutes + summaries.readings.minutes
+  const budgetMinutes = normalizeMinutes(data.weeklyBudgetMinutes)
+  return {
+    from, to, schoolYear, ...summaries, minutes,
+    missing: summaries.assignments.missing + summaries.readings.missing,
+    budgetMinutes,
+    availableMinutes: budgetMinutes === null ? null : budgetMinutes - minutes,
+  }
 }
 
 export function examSubjectProgress(exam, data) {

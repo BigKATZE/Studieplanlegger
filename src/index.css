@@ -349,8 +349,16 @@
 :root.dark .file-input::-webkit-file-upload-button:hover { background: #75d2b2; }
 
 @media (max-width: 767px) {
+  .app-navigation { position: sticky; top: 0; z-index: 30; padding-top: env(safe-area-inset-top, 0px); background: var(--color-paper); }
+  #main-content, #main-content section { scroll-margin-top: calc(60px + env(safe-area-inset-top, 0px)); }
+  .tab-strip { overflow-y: hidden; overscroll-behavior: none; }
+  .tab-strip > button { min-height: 44px; flex-shrink: 0; margin-bottom: 0; }
+  .tab-strip > button:focus-visible { outline-offset: -3px; }
+  .tab-strip .tab-active::after { bottom: 0; }
   .app-toolbar { display: grid; grid-template-columns: 1fr; }
   .app-toolbar > * { min-width: 0; }
+  .primary-toolbar { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .primary-toolbar > button, #add-actions > button { min-height: 44px; }
   input, select, textarea { font-size: 16px; }
 }
 

@@ -124,6 +124,7 @@ export function Select({ value, onChange, options, className = '', ariaLabel, pl
       focusOption(n - 1)
     } else if (e.key === 'Escape' && open) {
       e.preventDefault()
+      e.stopPropagation()
       setOpen(false)
       btnRef.current?.focus()
     } else if (e.key === 'Tab' && open) {

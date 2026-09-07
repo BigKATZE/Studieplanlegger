@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
-import { uid, SUBJECT_COLORS } from '../lib/store'
+import { useState, useMemo, useEffect, useEffectEvent, useRef } from 'react'
+import { uid, SUBJECT_COLORS, normalizeMinutes } from '../lib/store'
 import { isoWeek, weekRange } from '../lib/date'
 import { Select, DateField, TimeField } from './ui'
 
@@ -12,12 +12,13 @@ const COLOR_NAMES = {
 
 export function Modal({ title, onClose, children, solid = false }) {
   const panelRef = useRef(null)
+  const [previousFocus] = useState(() => document.activeElement)
+  const closeFromKeyboard = useEffectEvent(() => onClose())
   useEffect(() => {
-    const prev = document.activeElement
     const first = panelRef.current?.querySelector('input, select, textarea, button, [tabindex]')
     ;(first ?? panelRef.current)?.focus()
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') closeFromKeyboard()
       if (e.key === 'Tab') {
         const focusable = [...(panelRef.current?.querySelectorAll('a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), button:not(:disabled), [tabindex="0"]') ?? [])].filter((element) => element.getClientRects().length)
         const first = focusable[0]
@@ -30,9 +31,9 @@ export function Modal({ title, onClose, children, solid = false }) {
     document.addEventListener('keydown', onKey)
     return () => {
       document.removeEventListener('keydown', onKey)
-      prev?.focus?.()
+      previousFocus?.focus?.()
     }
-  }, [onClose])
+  }, [previousFocus])
   return (
     <div className="modal-backdrop fixed inset-0 z-50 overflow-y-auto p-4 pt-12" onClick={onClose}>
       <div
@@ -210,16 +211,19 @@ export function ReadingForm({ subjects, lectures, onAdd, onClose, initial }) {
   const [title, setTitle] = useState(initial?.title ?? '')
   const [chapters, setChapters] = useState('')
   const [week, setWeek] = useState(initial?.week != null ? String(initial.week) : '')
+  const [estimatedMinutes, setEstimatedMinutes] = useState(initial?.estimatedMinutes == null ? '' : String(initial.estimatedMinutes))
   const weekOptions = useMemo(() => buildWeekOptions(lectures), [lectures])
   const submit = (e) => {
     e.preventDefault()
     if (!subjectId || !title.trim()) return
+    if (!e.currentTarget.reportValidity() || (estimatedMinutes !== '' && normalizeMinutes(Number(estimatedMinutes)) === null)) return
     const newCh = parseChapters(chapters, initial?.chapters)
     onAdd({
       ...(initial?.id ? { id: initial.id } : {}),
       subjectId,
       title: title.trim(),
       week: week ? Number(week) : null,
+      estimatedMinutes: estimatedMinutes === '' ? null : Number(estimatedMinutes),
       done: initial?.done ?? false,
       chapters: initial ? [...(initial.chapters ?? []), ...newCh] : newCh,
     })
@@ -235,6 +239,10 @@ export function ReadingForm({ subjects, lectures, onAdd, onClose, initial }) {
       </Field>
       <Field label="Kapittel (komma-separert, valgfritt)">
         <input className={inputCls} value={chapters} onChange={(e) => setChapters(e.target.value)} placeholder="Kapittel 3, Kapittel 4" />
+      </Field>
+      <Field label="Estimert tid (minutter, valgfritt)">
+        <input className={inputCls} type="number" min="0" max="10080" step="1" value={estimatedMinutes} onChange={(e) => setEstimatedMinutes(e.target.value)} placeholder="Ikke angitt" />
+        <span className="mt-1 block text-xs text-muted">Hele pensumoppgaven, også når noen kapitler er fullført.</span>
       </Field>
       <Field label="Uke (valgfritt)">
         <Select
@@ -288,10 +296,12 @@ export function AssignmentForm({ subjects, onAdd, onClose, initial }) {
   const [subjectId, setSubjectId] = useState(initial?.subjectId ?? subjects[0]?.id ?? '')
   const [title, setTitle] = useState(initial?.title ?? '')
   const [deadline, setDeadline] = useState(initial?.deadline ?? '')
+  const [estimatedMinutes, setEstimatedMinutes] = useState(initial?.estimatedMinutes == null ? '' : String(initial.estimatedMinutes))
   const submit = (e) => {
     e.preventDefault()
     if (!subjectId || !title.trim() || !deadline) return
-    onAdd({ ...(initial?.id ? { id: initial.id } : {}), subjectId, title: title.trim(), deadline, status: initial?.status ?? 'not_started' })
+    if (!e.currentTarget.reportValidity() || (estimatedMinutes !== '' && normalizeMinutes(Number(estimatedMinutes)) === null)) return
+    onAdd({ ...(initial?.id ? { id: initial.id } : {}), subjectId, title: title.trim(), deadline, estimatedMinutes: estimatedMinutes === '' ? null : Number(estimatedMinutes), status: initial?.status ?? 'not_started' })
     onClose()
   }
   return (
@@ -304,6 +314,10 @@ export function AssignmentForm({ subjects, onAdd, onClose, initial }) {
       </Field>
       <Field label="Frist">
         <DateField value={deadline} onChange={setDeadline} required ariaLabel="Frist" />
+      </Field>
+      <Field label="Estimert tid (minutter, valgfritt)">
+        <input className={inputCls} type="number" min="0" max="10080" step="1" value={estimatedMinutes} onChange={(e) => setEstimatedMinutes(e.target.value)} placeholder="Ikke angitt" />
+        <span className="mt-1 block text-xs text-muted">Estimatet legges til uken med fristen.</span>
       </Field>
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onClose} className="btn-ghost">Avbryt</button>

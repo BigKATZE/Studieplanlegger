@@ -1,6 +1,6 @@
 const KEY = 'oliarev-study-planner-v2'
 const LEGACY_KEY = 'oliarev-study-planner-v1'
-const EMPTY_DATA = { subjects: [], lectures: [], assignments: [], exams: [], readings: [], reviews: [], weekTemplates: [], aiSources: [], quizAttempts: [], workPlans: [], semesterArchives: [] }
+const EMPTY_DATA = { subjects: [], lectures: [], assignments: [], exams: [], readings: [], reviews: [], weekTemplates: [], aiSources: [], quizAttempts: [], workPlans: [], semesterArchives: [], weeklyBudgetMinutes: null }
 
 export function uid() {
   return crypto.randomUUID()
@@ -19,6 +19,10 @@ export function pickSubjectColor(i) {
 }
 
 const isRecord = (value) => value && typeof value === 'object' && !Array.isArray(value)
+
+export function normalizeMinutes(value) {
+  return Number.isInteger(value) && value >= 0 && value <= 10080 ? value : null
+}
 
 function validIsoDate(value) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
@@ -91,7 +95,7 @@ function normalizeWorkPlan(item) {
 }
 
 export const PLANNER_COLLECTIONS = ['subjects', 'lectures', 'assignments', 'exams', 'readings', 'reviews', 'weekTemplates', 'aiSources', 'quizAttempts', 'workPlans']
-const ALLOWED_BACKUP_KEYS = [...PLANNER_COLLECTIONS, 'semesterArchives']
+const ALLOWED_BACKUP_KEYS = [...PLANNER_COLLECTIONS, 'semesterArchives', 'weeklyBudgetMinutes']
 const FORBIDDEN_KEYS = ['__proto__', 'constructor', 'prototype']
 
 function sanitizePlannerString(value, max) {
@@ -134,6 +138,7 @@ function normalizeAssignment(item) {
     subjectId: cleanText(item.subjectId, 128),
     title: sanitizePlannerString(item.title, 500),
     deadline: typeof item.deadline === 'string' && validIsoDate(item.deadline) ? item.deadline : '',
+    estimatedMinutes: normalizeMinutes(item.estimatedMinutes),
     status: ['not_started', 'in_progress', 'done'].includes(item.status) ? item.status : 'not_started',
     completedAt: cleanText(item.completedAt, 80),
     createdAt: cleanText(item.createdAt, 80),
@@ -158,6 +163,7 @@ function normalizeReading(item) {
     subjectId: cleanText(item.subjectId, 128),
     title: sanitizePlannerString(item.title, 500),
     week: Number.isInteger(item.week) && item.week >= 1 && item.week <= 53 ? item.week : null,
+    estimatedMinutes: normalizeMinutes(item.estimatedMinutes),
     done: Boolean(item.done),
     chapters,
     createdAt: cleanText(item.createdAt, 80),
@@ -177,6 +183,7 @@ export function normalizePlannerData(data, includeArchives = true) {
   }
   return {
     subjects: unique((Array.isArray(data.subjects) ? data.subjects : []).map(normalizeSubject).filter(Boolean)),
+    weeklyBudgetMinutes: normalizeMinutes(data.weeklyBudgetMinutes),
     lectures: unique((Array.isArray(data.lectures) ? data.lectures : []).map(normalizeLecture).filter(Boolean)),
     assignments: unique((Array.isArray(data.assignments) ? data.assignments : []).map(normalizeAssignment).filter(Boolean)),
     exams: unique((Array.isArray(data.exams) ? data.exams : []).map(normalizeExam).filter(Boolean)),
@@ -202,7 +209,9 @@ export function isValidBackupData(data, includeArchives = true) {
   if ('semesterArchives' in data && (!Array.isArray(data.semesterArchives) || data.semesterArchives.length > 20 || !data.semesterArchives.every((item) =>
     isRecord(item) && cleanText(item.id, 128) && cleanText(item.name, 100) && isValidBackupData(item.data, false),
   ))) return false
-  return ALLOWED_BACKUP_KEYS.every((key) => !(key in data) || Array.isArray(data[key]))
+  return ALLOWED_BACKUP_KEYS.every((key) => !(key in data) || (key === 'weeklyBudgetMinutes'
+    ? data[key] === null || normalizeMinutes(data[key]) !== null
+    : Array.isArray(data[key])))
 }
 
 export function load() {
